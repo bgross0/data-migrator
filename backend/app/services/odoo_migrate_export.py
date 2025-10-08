@@ -10,6 +10,7 @@ This service transforms interactive cleanup work into deterministic file-based c
 """
 
 import io
+import re
 import yaml
 import pandas as pd
 import zipfile
@@ -40,12 +41,21 @@ class OdooMigrateExportService:
             - config/ids.yml (external ID patterns)
             - config/project.yml (project config)
             - data/raw/*.csv (CLEANED data with transforms applied)
+
+        Raises:
+            ValueError: If dataset not found or validation fails
         """
         # Load dataset with all relationships
         dataset = self._load_dataset_with_relations(dataset_id)
 
         if not dataset:
             raise ValueError(f"Dataset {dataset_id} not found")
+
+        # Validate before export
+        validation_errors = self._validate_dataset_for_export(dataset)
+        if validation_errors:
+            error_msg = "Export validation failed:\n" + "\n".join(f"- {e}" for e in validation_errors)
+            raise ValueError(error_msg)
 
         # Create ZIP file in memory
         zip_buffer = io.BytesIO()
@@ -73,6 +83,62 @@ class OdooMigrateExportService:
             )\
             .filter(Dataset.id == dataset_id)\
             .first()
+
+    def _validate_dataset_for_export(self, dataset: Dataset) -> List[str]:
+        """
+        Validate dataset is ready for export.
+
+        Returns list of validation errors (empty if valid).
+        """
+        errors = []
+        warnings = []
+
+        # Check source file exists
+        if not dataset.source_file or not Path(dataset.source_file.path).exists():
+            errors.append("Source file not found or inaccessible")
+
+        # Check at least one sheet exists
+        if not dataset.sheets:
+            errors.append("No sheets found in dataset")
+
+        # Check at least one chosen mapping exists
+        has_chosen_mapping = False
+        for sheet in dataset.sheets:
+            for mapping in sheet.mappings:
+                if mapping.chosen:
+                    has_chosen_mapping = True
+
+                    # Validate chosen mappings have required fields
+                    if not mapping.target_model:
+                        errors.append(f"Mapping '{mapping.header_name}' missing target_model")
+                    if not mapping.target_field:
+                        errors.append(f"Mapping '{mapping.header_name}' missing target_field")
+
+                    # Check many2many fields (ending with /id) have split + map transforms
+                    if mapping.target_field and mapping.target_field.endswith('/id'):
+                        transforms = sorted(mapping.transforms, key=lambda t: t.order) if mapping.transforms else []
+                        has_split = any(t.fn == 'split' for t in transforms)
+                        has_map = any(t.fn == 'map' for t in transforms)
+
+                        if not has_split:
+                            warnings.append(
+                                f"Many2many field '{mapping.header_name}' → '{mapping.target_field}' "
+                                f"should have 'split' transform"
+                            )
+                        if not has_map:
+                            warnings.append(
+                                f"Many2many field '{mapping.header_name}' → '{mapping.target_field}' "
+                                f"should have 'map' transform (lookup table won't be generated)"
+                            )
+
+        if not has_chosen_mapping:
+            errors.append("No mappings marked as chosen - nothing to export")
+
+        # Log warnings (not blocking)
+        for warning in warnings:
+            print(f"⚠️  Warning: {warning}")
+
+        return errors
 
     def _add_config_files(self, zip_file: zipfile.ZipFile, dataset: Dataset) -> None:
         """Generate and add all configuration files to ZIP."""
@@ -180,6 +246,12 @@ class OdooMigrateExportService:
                         transform.fn,
                         transform.params or {}
                     )
+
+                # If transform chain resulted in a list (e.g., split + map),
+                # join it back to semicolon-separated string for CSV export
+                if isinstance(cleaned_value, list):
+                    cleaned_value = ";".join(str(v) for v in cleaned_value)
+
                 cleaned_values.append(cleaned_value)
 
             # Replace column with cleaned values
@@ -281,11 +353,97 @@ class OdooMigrateExportService:
         """
         Generate lookup tables for many2many relationships.
 
+        Detects fields with split + map transforms and creates lookup CSVs.
+
+        Example:
+        - Transform chain: ["split:;", "map:tags"]
+        - Source value: "VIP;Wholesale;Premium"
+        - Creates tags.csv:
+          source_key,external_id
+          VIP,migr.tag.VIP
+          Wholesale,migr.tag.Wholesale
+          Premium,migr.tag.Premium
+
         Returns dict of {table_name: dataframe}
         """
-        # For now, return empty dict
-        # TODO: Implement if Relationship model has many2many configs
-        return {}
+        lookup_data = defaultdict(set)  # {table_name: set of unique values}
+
+        # Scan all mappings for split + map patterns
+        for sheet in dataset.sheets:
+            for mapping in sheet.mappings:
+                if not mapping.chosen or not mapping.transforms:
+                    continue
+
+                # Get transforms ordered by order field
+                transforms = sorted(mapping.transforms, key=lambda t: t.order)
+
+                # Detect split + map pattern
+                has_split = False
+                split_delimiter = ';'
+                map_table_name = None
+
+                for transform in transforms:
+                    if transform.fn == 'split':
+                        has_split = True
+                        # Extract delimiter from params or default to ';'
+                        if transform.params and 'delimiter' in transform.params:
+                            split_delimiter = transform.params['delimiter']
+
+                    # Look for map with table name in params
+                    if transform.fn.startswith('map') or transform.fn == 'lookup':
+                        # Extract table name from params
+                        if transform.params and 'table' in transform.params:
+                            map_table_name = transform.params['table']
+
+                # If we found a split + map pattern, extract unique values
+                if has_split and map_table_name:
+                    # Read source file and extract values from this column
+                    file_path = Path(dataset.source_file.path)
+
+                    try:
+                        if file_path.suffix.lower() in ['.xlsx', '.xls']:
+                            df = pd.read_excel(file_path, sheet_name=sheet.name)
+                        elif file_path.suffix.lower() == '.csv':
+                            df = pd.read_csv(file_path)
+                        else:
+                            continue
+
+                        source_col = mapping.header_name
+                        if source_col not in df.columns:
+                            continue
+
+                        # Split values and collect unique items
+                        for value in df[source_col].dropna():
+                            items = str(value).split(split_delimiter)
+                            for item in items:
+                                item = item.strip()
+                                if item:
+                                    lookup_data[map_table_name].add(item)
+
+                    except Exception as e:
+                        # Skip if file can't be read
+                        print(f"Warning: Could not read source file for lookup table generation: {e}")
+                        continue
+
+        # Convert to dataframes
+        lookup_tables = {}
+        for table_name, values in lookup_data.items():
+            # Generate external IDs for each unique value
+            records = []
+            for value in sorted(values):
+                # Sanitize value for external ID (replace spaces/special chars with _)
+                sanitized = re.sub(r'[^a-zA-Z0-9_.-]', '_', value)
+                external_id = f"migr.{table_name}.{sanitized}"
+
+                records.append({
+                    'source_key': value,
+                    'external_id': external_id
+                })
+
+            if records:
+                lookup_tables[table_name] = pd.DataFrame(records)
+
+        return lookup_tables
 
     def _generate_project_config(self) -> Dict[str, Any]:
         """Generate project.yml configuration."""

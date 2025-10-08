@@ -103,6 +103,22 @@ class TransformService:
                 {"name": "suffix", "type": "string", "required": True}
             ]
         },
+
+        # Many2many / List transforms
+        "split": {
+            "name": "Split String",
+            "description": "Split string into list by delimiter (for many2many fields)",
+            "params": [
+                {"name": "delimiter", "type": "string", "required": False, "default": ";"}
+            ]
+        },
+        "map": {
+            "name": "Map to External IDs",
+            "description": "Map values to external IDs using lookup table (generates lookup CSV on export)",
+            "params": [
+                {"name": "table", "type": "string", "required": True, "description": "Lookup table name"}
+            ]
+        },
     }
 
     @classmethod
@@ -185,6 +201,34 @@ class TransformService:
         elif fn == "add_suffix":
             suffix = params.get("suffix", "")
             return f"{value}{suffix}"
+
+        # Many2many / List transforms
+        elif fn == "split":
+            delimiter = params.get("delimiter", ";")
+            # Split and trim each item
+            items = [item.strip() for item in str(value).split(delimiter) if item.strip()]
+            # Return as LIST (next transform in chain can process it)
+            return items
+
+        elif fn == "map":
+            # Map values to external IDs
+            table_name = params.get("table")
+
+            if not table_name:
+                return value
+
+            if isinstance(value, list):
+                # Map each item in list to external ID
+                mapped = []
+                for item in value:
+                    sanitized = re.sub(r'[^a-zA-Z0-9_.-]', '_', str(item))
+                    external_id = f"migr.{table_name}.{sanitized}"
+                    mapped.append(external_id)
+                return mapped  # Return list of external IDs
+            else:
+                # Single value
+                sanitized = re.sub(r'[^a-zA-Z0-9_.-]', '_', str(value))
+                return f"migr.{table_name}.{sanitized}"
 
         return value
 

@@ -1,174 +1,135 @@
 """
 Header matching system - maps spreadsheet column names to Odoo model fields.
-Uses exact, fuzzy, and AI-powered matching strategies.
+Uses comprehensive field mappings based on Odoo 18 documentation.
 """
 from typing import List, Dict, Any, Optional
-from rapidfuzz import fuzz, process
-import re
-from app.core.odoo_synonyms import get_all_fields_for_model, get_model_from_sheet_name
+from app.core.odoo_field_mappings import (
+    get_best_match,
+    detect_model_from_context,
+    normalize_field_name,
+    ODOO_FIELD_MAPPINGS
+)
 
 
 class HeaderMatcher:
     """Matches spreadsheet column headers to Odoo model fields."""
 
-    def __init__(self, target_model: str = "res.partner"):
+    def __init__(self, target_model: str = None):
         """
         Initialize matcher for a specific Odoo model.
 
         Args:
-            target_model: Target Odoo model (e.g., "res.partner")
+            target_model: Target Odoo model (e.g., "res.partner") or None for auto-detection
         """
         self.target_model = target_model
-        self.field_synonyms = get_all_fields_for_model(target_model)
+        self.column_names = []
 
-    def match(self, header: str, sheet_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    def match(self, header: str, sheet_name: Optional[str] = None, column_names: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
         Generate ranked mapping suggestions for a header.
 
         Args:
             header: Column header name
             sheet_name: Optional sheet name for model detection
+            column_names: Optional list of all column names for better model detection
 
         Returns:
             List of candidates: [{model, field, confidence, method, rationale}]
         """
-        # Auto-detect model from sheet name if provided
-        if sheet_name:
-            detected_model = get_model_from_sheet_name(sheet_name)
-            if detected_model != self.target_model:
-                self.target_model = detected_model
-                self.field_synonyms = get_all_fields_for_model(detected_model)
+        # Store column names for model detection
+        if column_names:
+            self.column_names = column_names
+
+        # Auto-detect model if not specified
+        if not self.target_model:
+            self.target_model = detect_model_from_context(sheet_name or "", self.column_names or [header])
 
         candidates = []
-        normalized_header = self._normalize(header)
 
-        # 1. Exact match
-        exact = self._exact_match(normalized_header)
-        if exact:
-            candidates.extend(exact)
+        # Try primary model first
+        field, confidence, rationale = get_best_match(header, self.target_model)
+        if field:
+            candidates.append({
+                "model": self.target_model,
+                "field": field,
+                "confidence": confidence,
+                "method": "field_mapping",
+                "rationale": rationale
+            })
 
-        # 2. Synonym match
-        synonym = self._synonym_match(normalized_header)
-        if synonym:
-            candidates.extend(synonym)
+        # Also try other likely models if confidence is not perfect
+        if confidence < 1.0:
+            alternative_models = self._get_alternative_models(header, sheet_name)
+            for alt_model in alternative_models:
+                if alt_model != self.target_model:
+                    alt_field, alt_confidence, alt_rationale = get_best_match(header, alt_model)
+                    if alt_field and alt_confidence > 0.5:
+                        candidates.append({
+                            "model": alt_model,
+                            "field": alt_field,
+                            "confidence": alt_confidence * 0.9,  # Slightly lower for alternative models
+                            "method": "alternative_model",
+                            "rationale": alt_rationale
+                        })
 
-        # 3. Fuzzy match
-        fuzzy = self._fuzzy_match(normalized_header, threshold=70)
-        candidates.extend(fuzzy)
-
-        # Deduplicate and sort by confidence
-        candidates = self._deduplicate(candidates)
+        # Sort by confidence
         candidates.sort(key=lambda x: x["confidence"], reverse=True)
+
+        # If no matches found, provide a generic fallback
+        if not candidates:
+            candidates.append({
+                "model": self.target_model,
+                "field": None,
+                "confidence": 0.0,
+                "method": "no_match",
+                "rationale": f"No suitable field found in {self.target_model} for '{header}'"
+            })
 
         return candidates[:5]  # Top 5
 
-    def _normalize(self, text: str) -> str:
-        """Normalize text for matching: lowercase, remove punctuation, trim."""
-        text = text.lower().strip()
-        # Remove common punctuation but keep spaces
-        text = re.sub(r'[^\w\s]', ' ', text)
-        # Collapse multiple spaces
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
+    def _get_alternative_models(self, header: str, sheet_name: str = None) -> List[str]:
+        """Get alternative models that might contain this field."""
+        header_lower = header.lower()
+        alternatives = []
 
-    def _exact_match(self, normalized_header: str) -> List[Dict[str, Any]]:
-        """Find exact matches in field names."""
-        matches = []
+        # Check which models might have this field
+        for model_name in ODOO_FIELD_MAPPINGS:
+            if model_name != self.target_model:
+                # Check if any field patterns match
+                for field_name, patterns in ODOO_FIELD_MAPPINGS[model_name].items():
+                    for pattern in patterns:
+                        if pattern.lower() in header_lower or header_lower in pattern.lower():
+                            if model_name not in alternatives:
+                                alternatives.append(model_name)
+                            break
 
-        for field_name, synonyms in self.field_synonyms.items():
-            # Check if header exactly matches field name
-            if normalized_header == field_name.replace('_', ' '):
-                matches.append({
-                    "model": self.target_model,
-                    "field": field_name,
-                    "confidence": 1.0,
-                    "method": "exact_field",
-                    "rationale": f"Exact match to field name '{field_name}'"
-                })
+        # Prioritize certain models based on context
+        priority_models = []
 
-        return matches
+        # If it looks like customer data, prioritize res.partner
+        if any(word in header_lower for word in ["customer", "client", "vendor", "supplier", "contact", "company"]):
+            priority_models.append("res.partner")
 
-    def _synonym_match(self, normalized_header: str) -> List[Dict[str, Any]]:
-        """Find matches using synonym dictionary."""
-        matches = []
+        # If it looks like product data, prioritize product.product
+        if any(word in header_lower for word in ["product", "item", "sku", "price", "cost"]):
+            priority_models.append("product.product")
 
-        for field_name, synonyms in self.field_synonyms.items():
-            for synonym in synonyms:
-                if normalized_header == synonym:
-                    matches.append({
-                        "model": self.target_model,
-                        "field": field_name,
-                        "confidence": 0.95,
-                        "method": "synonym",
-                        "rationale": f"Synonym match: '{normalized_header}' → '{field_name}'"
-                    })
-                    break  # Only one match per field
+        # If it looks like sales data, prioritize sale.order
+        if any(word in header_lower for word in ["order", "sale", "quotation"]):
+            priority_models.append("sale.order")
 
-        return matches
+        # If it looks like lead data, prioritize crm.lead
+        if any(word in header_lower for word in ["lead", "opportunity", "pipeline", "stage"]):
+            priority_models.append("crm.lead")
 
-    def _fuzzy_match(self, normalized_header: str, threshold: int = 70) -> List[Dict[str, Any]]:
-        """Find fuzzy matches using rapidfuzz."""
-        matches = []
+        # Combine priority models with alternatives
+        final_alternatives = []
+        for model in priority_models:
+            if model in alternatives and model not in final_alternatives:
+                final_alternatives.append(model)
 
-        # Build list of all possible match targets
-        targets = []
-        for field_name, synonyms in self.field_synonyms.items():
-            targets.append((field_name.replace('_', ' '), field_name))
-            for synonym in synonyms:
-                targets.append((synonym, field_name))
+        for model in alternatives:
+            if model not in final_alternatives:
+                final_alternatives.append(model)
 
-        # Use rapidfuzz to find best matches
-        target_strings = [t[0] for t in targets]
-        results = process.extract(
-            normalized_header,
-            target_strings,
-            scorer=fuzz.token_sort_ratio,
-            limit=10
-        )
-
-        # Convert results to candidates
-        seen_fields = set()
-        for match_text, score, _ in results:
-            if score < threshold:
-                continue
-
-            # Find which field this match corresponds to
-            field_name = None
-            for target_text, target_field in targets:
-                if target_text == match_text:
-                    field_name = target_field
-                    break
-
-            if field_name and field_name not in seen_fields:
-                seen_fields.add(field_name)
-
-                # Determine confidence based on score
-                confidence = score / 100.0
-
-                # Adjust confidence based on score ranges
-                if score >= 90:
-                    confidence = 0.90
-                elif score >= 75:
-                    confidence = 0.75
-                else:
-                    confidence = 0.60
-
-                matches.append({
-                    "model": self.target_model,
-                    "field": field_name,
-                    "confidence": confidence,
-                    "method": "fuzzy",
-                    "rationale": f"Fuzzy match (score: {score}): '{normalized_header}' → '{match_text}'"
-                })
-
-        return matches
-
-    def _deduplicate(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Remove duplicate candidates, keeping highest confidence."""
-        seen = {}
-        for candidate in candidates:
-            key = (candidate["model"], candidate["field"])
-            if key not in seen or candidate["confidence"] > seen[key]["confidence"]:
-                seen[key] = candidate
-
-        return list(seen.values())
+        return final_alternatives[:3]  # Return top 3 alternatives

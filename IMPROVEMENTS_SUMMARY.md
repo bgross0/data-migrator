@@ -120,6 +120,21 @@ Export validation failed:
 
 ---
 
+### 5. Module Registry Expansion
+
+**File:** `backend/app/field_mapper/core/module_registry.py`
+
+**What changed:**
+- Added dedicated module groups for marketing, maintenance, fleet, recruitment, expenses, skills, calendar, notes, lunch, discuss/live chat, and data cleaning
+- Linked each group to the appropriate Odoo models (e.g., `event.event`, `mailing.mailing`, `fleet.vehicle`, `hr.applicant`, `calendar.event`)
+- Expanded keyword inference so spreadsheet profiling suggests the new groups automatically
+
+**Impact:**
+- Module pre-selection now spans the broader Odoo 18 Community footprint described in the research plan
+- Deterministic mapper filters against a richer model set, improving first-pass suggestions for non-core datasets
+
+---
+
 ## 📊 Updated Quality Assessment
 
 | Component             | Status     | Quality                           |

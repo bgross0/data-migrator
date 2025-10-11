@@ -2,6 +2,7 @@
 Column profiling engine - analyzes spreadsheet columns for data types, quality metrics, patterns.
 """
 import pandas as pd
+import numpy as np
 import re
 from typing import Dict, List, Any
 from pathlib import Path
@@ -59,7 +60,14 @@ class ColumnProfiler:
             patterns = self.detect_patterns(series)
 
             # Get sample values (first 10 unique non-null)
-            sample_values = series.dropna().unique()[:10].tolist()
+            sample_values = series.dropna().unique()[:10]
+            # Convert to JSON-serializable types
+            sample_values = [
+                str(v) if isinstance(v, (pd.Timestamp, pd.Timedelta)) else
+                (int(v) if isinstance(v, np.integer) else
+                 (float(v) if isinstance(v, np.floating) else v))
+                for v in sample_values
+            ]
 
             profiles.append({
                 "name": str(col_name),

@@ -12,15 +12,96 @@ async def get_dataset_mappings(dataset_id: int, db: Session = Depends(get_db)):
     """Get all mappings for a dataset."""
     service = MappingService(db)
     mappings = service.get_mappings_for_dataset(dataset_id)
-    return {"mappings": mappings, "total": len(mappings)}
+
+    # Explicitly convert SQLAlchemy objects to dicts for proper serialization
+    mapping_responses = []
+    for mapping in mappings:
+        mapping_dict = {
+            "id": mapping.id,
+            "dataset_id": mapping.dataset_id,
+            "sheet_id": mapping.sheet_id,
+            "header_name": mapping.header_name,
+            "target_model": mapping.target_model,
+            "target_field": mapping.target_field,
+            "confidence": mapping.confidence if mapping.confidence is not None else 0.0,
+            "status": mapping.status,
+            "chosen": mapping.chosen,
+            "rationale": mapping.rationale,
+            "custom_field_definition": mapping.custom_field_definition,
+            "transforms": [
+                {
+                    "id": t.id,
+                    "mapping_id": t.mapping_id,
+                    "order": t.order,
+                    "fn": t.fn,
+                    "params": t.params
+                } for t in mapping.transforms
+            ] if mapping.transforms else [],
+            "suggestions": [
+                {
+                    "id": s.id,
+                    "mapping_id": s.mapping_id,
+                    "candidates": s.candidates
+                } for s in mapping.suggestions
+            ] if mapping.suggestions else []
+        }
+        mapping_responses.append(mapping_dict)
+
+    return {"mappings": mapping_responses, "total": len(mapping_responses)}
 
 
-@router.post("/datasets/{dataset_id}/mappings/generate")
-async def generate_mappings(dataset_id: int, db: Session = Depends(get_db)):
-    """Generate mapping suggestions for a dataset."""
+@router.post("/datasets/{dataset_id}/mappings/generate", response_model=MappingListResponse)
+async def generate_mappings(
+    dataset_id: int,
+    use_deterministic: bool = True,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate mapping suggestions for a dataset.
+
+    Args:
+        dataset_id: ID of the dataset
+        use_deterministic: Use deterministic field mapper (odoo-dictionary based) if True,
+                          use hardcoded mappings if False. Defaults to True.
+    """
     service = MappingService(db)
-    mappings = await service.generate_mappings(dataset_id)
-    return {"mappings": mappings, "total": len(mappings)}
+    mappings = await service.generate_mappings_v2(dataset_id, use_deterministic=use_deterministic)
+
+    # Explicitly convert SQLAlchemy objects to dicts for proper serialization
+    mapping_responses = []
+    for mapping in mappings:
+        mapping_dict = {
+            "id": mapping.id,
+            "dataset_id": mapping.dataset_id,
+            "sheet_id": mapping.sheet_id,
+            "header_name": mapping.header_name,
+            "target_model": mapping.target_model,
+            "target_field": mapping.target_field,
+            "confidence": mapping.confidence if mapping.confidence is not None else 0.0,
+            "status": mapping.status,
+            "chosen": mapping.chosen,
+            "rationale": mapping.rationale,
+            "custom_field_definition": mapping.custom_field_definition,
+            "transforms": [
+                {
+                    "id": t.id,
+                    "mapping_id": t.mapping_id,
+                    "order": t.order,
+                    "fn": t.fn,
+                    "params": t.params
+                } for t in mapping.transforms
+            ] if hasattr(mapping, 'transforms') and mapping.transforms else [],
+            "suggestions": [
+                {
+                    "id": s.id,
+                    "mapping_id": s.mapping_id,
+                    "candidates": s.candidates
+                } for s in mapping.suggestions
+            ] if hasattr(mapping, 'suggestions') and mapping.suggestions else []
+        }
+        mapping_responses.append(mapping_dict)
+
+    return {"mappings": mapping_responses, "total": len(mapping_responses)}
 
 
 @router.put("/mappings/{mapping_id}", response_model=MappingResponse)

@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     # Storage
     STORAGE_PATH: str = "../storage"
 
+    # Field Mapper - Odoo Dictionary Path
+    ODOO_DICTIONARY_PATH: str = "../odoo-dictionary"
+
     # Auth
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

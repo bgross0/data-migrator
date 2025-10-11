@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -27,11 +27,15 @@ class Dataset(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_by = Column(Integer, nullable=True)  # TODO: Add User model
 
+    # Module selection for improved mapping accuracy
+    selected_modules = Column(JSON, default=list)  # List of module group names ["sales_crm", "contacts"]
+    detected_domain = Column(String, nullable=True)  # Auto-detected business domain
+
     # Relationships
     source_file = relationship("SourceFile", back_populates="datasets")
     sheets = relationship("Sheet", back_populates="dataset", cascade="all, delete-orphan")
-    mappings = relationship("Mapping", back_populates="dataset")
-    runs = relationship("Run", back_populates="dataset")
+    mappings = relationship("Mapping", back_populates="dataset", cascade="all, delete-orphan")
+    runs = relationship("Run", back_populates="dataset", cascade="all, delete-orphan")
 
 
 class Sheet(Base):

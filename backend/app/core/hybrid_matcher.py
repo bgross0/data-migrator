@@ -27,6 +27,7 @@ import re
 from app.field_mapper.matching.business_context_analyzer import BusinessContextAnalyzer
 from app.field_mapper.core.knowledge_base import OdooKnowledgeBase
 from app.field_mapper.core.data_structures import ColumnProfile
+from app.field_mapper.core.module_registry import get_module_registry
 from app.core.odoo_field_mappings import ODOO_FIELD_MAPPINGS
 
 
@@ -73,7 +74,8 @@ class HybridMatcher:
         self,
         header: str,
         sheet_name: Optional[str] = None,
-        column_names: Optional[List[str]] = None
+        column_names: Optional[List[str]] = None,
+        selected_modules: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """
         Generate ranked mapping suggestions for a header.
@@ -82,6 +84,7 @@ class HybridMatcher:
             header: Column header name
             sheet_name: Optional sheet name for context
             column_names: Optional list of all column names for model detection
+            selected_modules: Optional list of module names to constrain model search
 
         Returns:
             List of candidates: [{model, field, confidence, method, rationale}]
@@ -90,7 +93,7 @@ class HybridMatcher:
             column_names = [header]
 
         # Step 1: Detect primary model using BusinessContextAnalyzer
-        primary_model = self._detect_primary_model(column_names, sheet_name)
+        primary_model = self._detect_primary_model(column_names, sheet_name, selected_modules)
 
         # Step 2: Try pattern match (hardcoded patterns from simple matcher)
         pattern_match = self._pattern_match(header, primary_model)
@@ -115,20 +118,30 @@ class HybridMatcher:
     def _detect_primary_model(
         self,
         column_names: List[str],
-        sheet_name: Optional[str] = None
+        sheet_name: Optional[str] = None,
+        selected_modules: Optional[List[str]] = None
     ) -> str:
         """
         Detect the primary model for this sheet.
 
-        Uses BusinessContextAnalyzer with domain signatures.
+        Uses BusinessContextAnalyzer with domain signatures, optionally
+        constrained to selected modules.
 
         Args:
             column_names: List of all column names in the sheet
             sheet_name: Optional sheet name
+            selected_modules: Optional list of module names to constrain search
 
         Returns:
             Primary model name (e.g., "res.partner")
         """
+        # Get allowed models from selected modules if provided
+        allowed_models = None
+        if selected_modules:
+            registry = get_module_registry()
+            allowed_models = registry.get_models_for_groups(selected_modules)
+            print(f"🎯 Constraining model detection to {len(allowed_models)} models from modules: {selected_modules}")
+
         # Create minimal column profiles for BusinessContextAnalyzer
         # It only needs column names for domain detection
         column_profiles = [
@@ -150,8 +163,17 @@ class HybridMatcher:
         # Get recommended models from BusinessContextAnalyzer
         recommended = self.business_analyzer.get_recommended_models(
             column_profiles,
-            max_models=1
+            max_models=5  # Get more options to filter
         )
+
+        # Filter by allowed models if specified
+        if recommended and allowed_models:
+            filtered = [m for m in recommended if m in allowed_models]
+            if filtered:
+                print(f"✓ Filtered to allowed model: {filtered[0]}")
+                return filtered[0]
+            else:
+                print(f"⚠ No recommended models match selected modules, using fallback heuristics")
 
         if recommended:
             return recommended[0]
@@ -160,57 +182,76 @@ class HybridMatcher:
         col_names_lower = [c.lower() for c in column_names]
         col_names_joined = ' '.join(col_names_lower)
 
+        # Helper to check if model is allowed
+        def is_allowed(model: str) -> bool:
+            return allowed_models is None or model in allowed_models
+
         # Check for specific models FIRST (before generic ones)
         # Order matters: most specific first, most generic last
 
         # Fleet/Vehicle indicators (very specific)
-        if any(ind in col_names_joined for ind in ["vin", "license plate", "vehicle", "odometer", "driver"]):
+        if is_allowed("fleet.vehicle") and any(ind in col_names_joined for ind in ["vin", "license plate", "vehicle", "odometer", "driver"]):
             return "fleet.vehicle"
 
         # Lead/CRM indicators (specific)
-        lead_count = sum(1 for ind in ["opportunity", "lead", "expected revenue", "source"] if ind in col_names_joined)
-        if lead_count >= 2 or "opportunity" in col_names_joined:
-            return "crm.lead"
+        if is_allowed("crm.lead"):
+            lead_count = sum(1 for ind in ["opportunity", "lead", "expected revenue", "source"] if ind in col_names_joined)
+            if lead_count >= 2 or "opportunity" in col_names_joined:
+                return "crm.lead"
 
         # Project indicators (specific)
-        project_count = sum(1 for ind in ["project", "deadline"] if ind in col_names_joined)
-        if project_count >= 2 or ("project" in col_names_joined and "manager" in col_names_joined):
-            return "project.project"
+        if is_allowed("project.project"):
+            project_count = sum(1 for ind in ["project", "deadline"] if ind in col_names_joined)
+            if project_count >= 2 or ("project" in col_names_joined and "manager" in col_names_joined):
+                return "project.project"
 
         # Task indicators (specific)
-        task_count = sum(1 for ind in ["task", "assigned", "priority"] if ind in col_names_joined)
-        if task_count >= 2:
-            return "project.task"
+        if is_allowed("project.task"):
+            task_count = sum(1 for ind in ["task", "assigned", "priority"] if ind in col_names_joined)
+            if task_count >= 2:
+                return "project.task"
 
         # Invoice indicators (check before order - invoices have "due date")
-        invoice_count = sum(1 for ind in ["invoice", "due date", "bill"] if ind in col_names_joined)
-        if invoice_count >= 2 or "invoice" in col_names_joined:
-            return "account.move"
+        if is_allowed("account.move"):
+            invoice_count = sum(1 for ind in ["invoice", "due date", "bill"] if ind in col_names_joined)
+            if invoice_count >= 2 or "invoice" in col_names_joined:
+                return "account.move"
 
         # Sale order line indicators (check before sale order)
-        if "order" in col_names_joined and "quantity" in col_names_joined and ("unit price" in col_names_joined or "discount" in col_names_joined):
+        if is_allowed("sale.order.line") and "order" in col_names_joined and "quantity" in col_names_joined and ("unit price" in col_names_joined or "discount" in col_names_joined):
             return "sale.order.line"
 
         # Sales order indicators
-        order_count = sum(1 for ind in ["order", "sale", "salesperson"] if ind in col_names_joined)
-        if order_count >= 2 or ("order" in col_names_joined and "customer" in col_names_joined):
-            return "sale.order"
+        if is_allowed("sale.order"):
+            order_count = sum(1 for ind in ["order", "sale", "salesperson"] if ind in col_names_joined)
+            if order_count >= 2 or ("order" in col_names_joined and "customer" in col_names_joined):
+                return "sale.order"
 
         # Analytic/Financial indicators (specific)
-        if "segment" in col_names_joined or "analytic" in col_names_joined:
-            if "revenue" in col_names_joined or "profit" in col_names_joined or "cogs" in col_names_joined:
-                return "account.analytic.line"
+        if is_allowed("account.analytic.line"):
+            if "segment" in col_names_joined or "analytic" in col_names_joined:
+                if "revenue" in col_names_joined or "profit" in col_names_joined or "cogs" in col_names_joined:
+                    return "account.analytic.line"
 
         # Product indicators (check AFTER more specific models)
-        product_count = sum(1 for ind in ["product", "sku", "barcode"] if ind in col_names_joined)
-        if product_count >= 2:
-            return "product.product"
-        # Only use generic "price"/"cost" if combined with product-specific terms
-        if ("sku" in col_names_joined or "barcode" in col_names_joined) and ("price" in col_names_joined or "cost" in col_names_joined):
-            return "product.product"
+        if is_allowed("product.product"):
+            product_count = sum(1 for ind in ["product", "sku", "barcode"] if ind in col_names_joined)
+            if product_count >= 2:
+                return "product.product"
+            # Only use generic "price"/"cost" if combined with product-specific terms
+            if ("sku" in col_names_joined or "barcode" in col_names_joined) and ("price" in col_names_joined or "cost" in col_names_joined):
+                return "product.product"
 
-        # Default to res.partner (most common)
-        return "res.partner"
+        # Default to res.partner (most common) if allowed, otherwise use first allowed model
+        if is_allowed("res.partner"):
+            return "res.partner"
+        elif allowed_models:
+            # Use first allowed model as fallback
+            fallback = list(allowed_models)[0]
+            print(f"⚠ Falling back to first allowed model: {fallback}")
+            return fallback
+        else:
+            return "res.partner"
 
     def _pattern_match(
         self,

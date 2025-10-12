@@ -84,12 +84,62 @@ class TwoPhaseImporter:
         return stats
 
     def _resolve_relationships(self, model: str, record: Dict) -> Dict:
-        """Resolve foreign key references using KeyMap."""
-        # TODO: Implement relationship resolution
-        # 1. Identify relationship fields in record
-        # 2. Look up parent records in KeyMap
-        # 3. Replace external keys with Odoo IDs
-        return record
+        """
+        Resolve foreign key references using KeyMap.
+
+        For fields ending in '_id', looks up the Odoo ID from KeyMap
+        based on the source value and replaces it.
+
+        Args:
+            model: Target Odoo model
+            record: Record dict with source values
+
+        Returns:
+            Record dict with resolved Odoo IDs for relationship fields
+        """
+        resolved = record.copy()
+
+        # Common relationship field mappings
+        relationship_mappings = {
+            "partner_id": "res.partner",
+            "user_id": "res.users",
+            "company_id": "res.company",
+            "product_id": "product.product",
+            "product_tmpl_id": "product.template",
+            "project_id": "project.project",
+            "task_id": "project.task",
+            "order_id": "sale.order",
+            "invoice_id": "account.move",
+            "parent_id": model,  # Same model (hierarchical)
+        }
+
+        for field_name, value in record.items():
+            # Check if this is a relationship field
+            if field_name.endswith("_id") and value:
+                # Determine parent model
+                parent_model = relationship_mappings.get(field_name)
+
+                if not parent_model:
+                    # Try to infer from field name (e.g., "customer_id" -> "res.partner")
+                    # For now, skip unknown relationship fields
+                    continue
+
+                # Look up in KeyMap
+                keymap = self.db.query(KeyMap).filter(
+                    KeyMap.run_id == self.run.id,
+                    KeyMap.model == parent_model,
+                    KeyMap.source_key == str(value)
+                ).first()
+
+                if keymap and keymap.odoo_id:
+                    # Replace with Odoo ID
+                    resolved[field_name] = keymap.odoo_id
+                else:
+                    # Parent not found - remove field or handle error
+                    # For now, keep original value and let Odoo handle it
+                    pass
+
+        return resolved
 
     def _get_lookup_field(self, model: str, record: Dict) -> str:
         """Get the field to use for lookup (external key)."""

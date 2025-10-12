@@ -6,7 +6,8 @@ from app.core.database import SessionLocal
 from app.models import Run
 from app.models.run import RunStatus
 from app.connectors.odoo import OdooConnector
-from app.importers.executor import TwoPhaseImporter
+from app.services.import_service import ImportService
+from app.core.config import settings
 
 
 @celery_app.task(name="execute_import")
@@ -24,23 +25,35 @@ def execute_import(run_id: int, dry_run: bool = True):
         if not run:
             return {"error": "Run not found"}
 
-        # Update status
-        run.status = RunStatus.IMPORTING
-        db.commit()
+        dataset_id = run.dataset_id
 
-        # TODO: Get prepared data from dataset/mappings
-        # TODO: Get import graph
-        # TODO: Execute import
-        # For now, just mark as completed
-        run.status = RunStatus.COMPLETED
-        run.stats = {"created": 0, "updated": 0, "errors": 0}
-        db.commit()
+        # Initialize Odoo connector
+        odoo = OdooConnector(
+            url=settings.ODOO_URL,
+            db=settings.ODOO_DB,
+            username=settings.ODOO_USERNAME,
+            password=settings.ODOO_PASSWORD
+        )
+        odoo.authenticate()
 
-        return {"status": "completed", "run_id": run_id}
+        # Execute import via ImportService
+        import_service = ImportService(db)
+
+        # Run the import (this updates the run object with results)
+        result_run = import_service.execute_import(
+            dataset_id=dataset_id,
+            odoo=odoo,
+            dry_run=dry_run
+        )
+
+        return {
+            "status": result_run.status.value,
+            "run_id": run_id,
+            "stats": result_run.stats
+        }
 
     except Exception as e:
-        run.status = RunStatus.FAILED
-        db.commit()
-        return {"error": str(e)}
+        # ImportService handles run status updates, but catch any unexpected errors
+        return {"error": str(e), "run_id": run_id}
     finally:
         db.close()

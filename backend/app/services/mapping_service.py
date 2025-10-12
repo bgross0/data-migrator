@@ -71,6 +71,11 @@ class MappingService:
         if not dataset:
             return []
 
+        # Get selected modules for this dataset
+        selected_modules = dataset.selected_modules if hasattr(dataset, 'selected_modules') else None
+        if selected_modules:
+            print(f"🎯 Using selected modules for mapping: {selected_modules}")
+
         all_mappings = []
 
         # Process each sheet
@@ -88,11 +93,12 @@ class MappingService:
 
             # Generate mapping for each column
             for profile in profiles:
-                # Get suggestions from matcher with full context
+                # Get suggestions from matcher with full context (including selected modules)
                 candidates = matcher.match(
                     header=profile.name,
                     sheet_name=sheet.name,
-                    column_names=column_names
+                    column_names=column_names,
+                    selected_modules=selected_modules
                 )
 
                 # Create mapping record with top suggestion
@@ -150,17 +156,32 @@ class MappingService:
         if not dataset or not dataset.source_file:
             return []
 
+        # Get selected modules for this dataset
+        selected_modules = dataset.selected_modules if hasattr(dataset, 'selected_modules') else None
+        if selected_modules:
+            print(f"🎯 Using selected modules for mapping: {selected_modules}")
+
         all_mappings = []
 
         # Process each sheet
         for sheet in dataset.sheets:
-            # Read the source file for this sheet
-            file_path = Path(dataset.source_file.path)
+            # Prefer cleaned data over raw data
+            if dataset.cleaned_file_path and Path(dataset.cleaned_file_path).exists():
+                file_path = Path(dataset.cleaned_file_path)
+                print(f"INFO: Using cleaned data from {file_path}")
+            else:
+                file_path = Path(dataset.source_file.path)
+                print(f"INFO: Using raw data from {file_path} (no cleaned data available)")
 
             try:
-                if file_path.suffix.lower() in ['.xlsx', '.xls']:
+                # Check file type by extension (cleaned files use .cleaned.csv or .cleaned.xlsx)
+                file_ext = file_path.suffix.lower()
+                is_excel = file_ext in ['.xlsx', '.xls'] or '.xlsx' in file_path.name or '.xls' in file_path.name
+                is_csv = file_ext == '.csv' or '.csv' in file_path.name
+
+                if is_excel:
                     df = pd.read_excel(file_path, sheet_name=sheet.name)
-                elif file_path.suffix.lower() == '.csv':
+                elif is_csv:
                     df = pd.read_csv(file_path)
                 else:
                     continue
@@ -168,7 +189,11 @@ class MappingService:
                 # Use deterministic field mapper
                 # map_dataframe returns Dict[str, List[FieldMapping]]
                 # Structure: {column_name: [FieldMapping, ...]}
-                sheet_mappings = self.deterministic_mapper.map_dataframe(df, sheet_name=sheet.name)
+                sheet_mappings = self.deterministic_mapper.map_dataframe(
+                    df,
+                    sheet_name=sheet.name,
+                    selected_modules=selected_modules
+                )
 
                 print(f"INFO: Found {len(sheet_mappings)} columns with mappings for sheet '{sheet.name}'")
 
@@ -251,6 +276,11 @@ class MappingService:
         if not dataset:
             return []
 
+        # Get selected modules for this dataset
+        selected_modules = dataset.selected_modules if hasattr(dataset, 'selected_modules') else None
+        if selected_modules:
+            print(f"🎯 Using selected modules for mapping: {selected_modules}")
+
         all_mappings = []
 
         # Process each sheet
@@ -267,11 +297,12 @@ class MappingService:
 
             # Generate mapping for each column
             for profile in profiles:
-                # Get suggestions from hybrid matcher with full context
+                # Get suggestions from hybrid matcher with full context (including selected modules)
                 candidates = self.hybrid_matcher.match(
                     header=profile.name,
                     sheet_name=sheet.name,
-                    column_names=column_names
+                    column_names=column_names,
+                    selected_modules=selected_modules
                 )
 
                 # Create mapping record with top suggestion

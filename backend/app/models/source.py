@@ -31,6 +31,11 @@ class Dataset(Base):
     selected_modules = Column(JSON, default=list)  # List of module group names ["sales_crm", "contacts"]
     detected_domain = Column(String, nullable=True)  # Auto-detected business domain
 
+    # Data cleaning tracking
+    cleaned_file_path = Column(String, nullable=True)  # Path to cleaned data file
+    cleaning_report = Column(JSON, nullable=True)  # Report of what was cleaned
+    profiling_status = Column(String, default="pending", nullable=False)  # pending, processing, complete, failed
+
     # Relationships
     source_file = relationship("SourceFile", back_populates="datasets")
     sheets = relationship("Sheet", back_populates="dataset", cascade="all, delete-orphan")

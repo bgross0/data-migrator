@@ -1,0 +1,1867 @@
+{
+  "summary": {
+    "total_test_cases": 10,
+    "total_fields": 75,
+    "raw_correct": 66,
+    "cleaned_correct": 74,
+    "raw_accuracy": 0.88,
+    "cleaned_accuracy": 0.9866666666666667,
+    "improvement": 0.10666666666666667,
+    "raw_passed": 7,
+    "cleaned_passed": 10,
+    "duration_seconds": 0.258119,
+    "timestamp": "2025-10-12T02:53:30.316852"
+  },
+  "test_cases": [
+    {
+      "test_name": "Customers (Messy)",
+      "test_key": "customers_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Customers (Messy)",
+        "test_key": "customers_messy",
+        "total_fields": 9,
+        "correct": 9,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.9,
+        "passed": true,
+        "critical": true,
+        "column_results": [
+          {
+            "column": "Customer Name*",
+            "expected_model": "res.partner",
+            "expected_field": "name",
+            "predicted_model": "res.partner",
+            "predicted_field": "name",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Contact Email...",
+            "expected_model": "res.partner",
+            "expected_field": "email",
+            "predicted_model": "res.partner",
+            "predicted_field": "email",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Phone #",
+            "expected_model": "res.partner",
+            "expected_field": "phone",
+            "predicted_model": "res.partner",
+            "predicted_field": "phone",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Street Address (Main)",
+            "expected_model": "res.partner",
+            "expected_field": "street",
+            "predicted_model": "res.partner",
+            "predicted_field": "street",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "City (Billing)",
+            "expected_model": "res.partner",
+            "expected_field": "city",
+            "predicted_model": "res.partner",
+            "predicted_field": "city",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "State?",
+            "expected_model": "res.partner",
+            "expected_field": "state_id",
+            "predicted_model": "res.partner",
+            "predicted_field": "state_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Zip Code...",
+            "expected_model": "res.partner",
+            "expected_field": "zip",
+            "predicted_model": "res.partner",
+            "predicted_field": "zip",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Annual Revenue (USD)",
+            "expected_model": "res.partner",
+            "expected_field": "x_annual_revenue",
+            "predicted_model": "res.partner",
+            "predicted_field": "x_annual_revenue",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Customer ID*",
+            "expected_model": "res.partner",
+            "expected_field": "ref",
+            "predicted_model": "res.partner",
+            "predicted_field": "ref",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Customers (Messy)",
+        "test_key": "customers_messy",
+        "total_fields": 9,
+        "correct": 9,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.9,
+        "passed": true,
+        "critical": true,
+        "column_results": [
+          {
+            "column": "Customer Name",
+            "expected_model": "res.partner",
+            "expected_field": "name",
+            "predicted_model": "res.partner",
+            "predicted_field": "name",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Contact Email",
+            "expected_model": "res.partner",
+            "expected_field": "email",
+            "predicted_model": "res.partner",
+            "predicted_field": "email",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Phone",
+            "expected_model": "res.partner",
+            "expected_field": "phone",
+            "predicted_model": "res.partner",
+            "predicted_field": "phone",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Street Address",
+            "expected_model": "res.partner",
+            "expected_field": "street",
+            "predicted_model": "res.partner",
+            "predicted_field": "street",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "City",
+            "expected_model": "res.partner",
+            "expected_field": "city",
+            "predicted_model": "res.partner",
+            "predicted_field": "city",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "State",
+            "expected_model": "res.partner",
+            "expected_field": "state_id",
+            "predicted_model": "res.partner",
+            "predicted_field": "state_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Zip Code",
+            "expected_model": "res.partner",
+            "expected_field": "zip",
+            "predicted_model": "res.partner",
+            "predicted_field": "zip",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Annual Revenue",
+            "expected_model": "res.partner",
+            "expected_field": "x_annual_revenue",
+            "predicted_model": "res.partner",
+            "predicted_field": "x_annual_revenue",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Customer ID",
+            "expected_model": "res.partner",
+            "expected_field": "ref",
+            "predicted_model": "res.partner",
+            "predicted_field": "ref",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.0
+    },
+    {
+      "test_name": "Products (Messy)",
+      "test_key": "products_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Products (Messy)",
+        "test_key": "products_messy",
+        "total_fields": 7,
+        "correct": 6,
+        "incorrect": 1,
+        "missing": 0,
+        "accuracy": 0.8571428571428571,
+        "threshold": 0.9,
+        "passed": false,
+        "critical": true,
+        "column_results": [
+          {
+            "column": "Product Name...",
+            "expected_model": "product.product",
+            "expected_field": "name",
+            "predicted_model": "product.product",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "SKU*",
+            "expected_model": "product.product",
+            "expected_field": "default_code",
+            "predicted_model": "product.product",
+            "predicted_field": "default_code",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Sale Price?",
+            "expected_model": "product.product",
+            "expected_field": "list_price",
+            "predicted_model": "product.product",
+            "predicted_field": "list_price",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Cost Price (Internal)",
+            "expected_model": "product.product",
+            "expected_field": "standard_price",
+            "predicted_model": "product.product",
+            "predicted_field": "list_price",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Category*",
+            "expected_model": "product.product",
+            "expected_field": "categ_id",
+            "predicted_model": "product.product",
+            "predicted_field": "categ_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Barcode #",
+            "expected_model": "product.product",
+            "expected_field": "barcode",
+            "predicted_model": "product.product",
+            "predicted_field": "barcode",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Active?",
+            "expected_model": "product.product",
+            "expected_field": "active",
+            "predicted_model": "product.product",
+            "predicted_field": "active",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Products (Messy)",
+        "test_key": "products_messy",
+        "total_fields": 7,
+        "correct": 7,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.9,
+        "passed": true,
+        "critical": true,
+        "column_results": [
+          {
+            "column": "Product Name",
+            "expected_model": "product.product",
+            "expected_field": "name",
+            "predicted_model": "product.product",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "SKU",
+            "expected_model": "product.product",
+            "expected_field": "default_code",
+            "predicted_model": "product.product",
+            "predicted_field": "default_code",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Sale Price",
+            "expected_model": "product.product",
+            "expected_field": "list_price",
+            "predicted_model": "product.product",
+            "predicted_field": "list_price",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Cost Price",
+            "expected_model": "product.product",
+            "expected_field": "standard_price",
+            "predicted_model": "product.product",
+            "predicted_field": "standard_price",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Category",
+            "expected_model": "product.product",
+            "expected_field": "categ_id",
+            "predicted_model": "product.product",
+            "predicted_field": "categ_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Barcode",
+            "expected_model": "product.product",
+            "expected_field": "barcode",
+            "predicted_model": "product.product",
+            "predicted_field": "barcode",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Active",
+            "expected_model": "product.product",
+            "expected_field": "active",
+            "predicted_model": "product.product",
+            "predicted_field": "active",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.1428571428571429
+    },
+    {
+      "test_name": "Sales Orders (Messy)",
+      "test_key": "sales_orders_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Sales Orders (Messy)",
+        "test_key": "sales_orders_messy",
+        "total_fields": 6,
+        "correct": 6,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.85,
+        "passed": true,
+        "critical": true,
+        "column_results": [
+          {
+            "column": "Order Number*",
+            "expected_model": "sale.order",
+            "expected_field": "name",
+            "predicted_model": "sale.order",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Customer (Main)",
+            "expected_model": "sale.order",
+            "expected_field": "partner_id",
+            "predicted_model": "sale.order",
+            "predicted_field": "partner_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Order Date...",
+            "expected_model": "sale.order",
+            "expected_field": "date_order",
+            "predicted_model": "sale.order",
+            "predicted_field": "date_order",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Total Amount?",
+            "expected_model": "sale.order",
+            "expected_field": "amount_total",
+            "predicted_model": "sale.order",
+            "predicted_field": "amount_total",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Status (Current)",
+            "expected_model": "sale.order",
+            "expected_field": "state",
+            "predicted_model": "sale.order",
+            "predicted_field": "state",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Salesperson (Assigned)",
+            "expected_model": "sale.order",
+            "expected_field": "user_id",
+            "predicted_model": "sale.order",
+            "predicted_field": "user_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Sales Orders (Messy)",
+        "test_key": "sales_orders_messy",
+        "total_fields": 6,
+        "correct": 6,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.85,
+        "passed": true,
+        "critical": true,
+        "column_results": [
+          {
+            "column": "Order Number",
+            "expected_model": "sale.order",
+            "expected_field": "name",
+            "predicted_model": "sale.order",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Customer",
+            "expected_model": "sale.order",
+            "expected_field": "partner_id",
+            "predicted_model": "sale.order",
+            "predicted_field": "partner_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Order Date",
+            "expected_model": "sale.order",
+            "expected_field": "date_order",
+            "predicted_model": "sale.order",
+            "predicted_field": "date_order",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Total Amount",
+            "expected_model": "sale.order",
+            "expected_field": "amount_total",
+            "predicted_model": "sale.order",
+            "predicted_field": "amount_total",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Status",
+            "expected_model": "sale.order",
+            "expected_field": "state",
+            "predicted_model": "sale.order",
+            "predicted_field": "state",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Salesperson",
+            "expected_model": "sale.order",
+            "expected_field": "user_id",
+            "predicted_model": "sale.order",
+            "predicted_field": "user_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.0
+    },
+    {
+      "test_name": "Invoices (Messy)",
+      "test_key": "invoices_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Invoices (Messy)",
+        "test_key": "invoices_messy",
+        "total_fields": 8,
+        "correct": 6,
+        "incorrect": 2,
+        "missing": 0,
+        "accuracy": 0.75,
+        "threshold": 0.85,
+        "passed": false,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Invoice Number*",
+            "expected_model": "account.move",
+            "expected_field": "name",
+            "predicted_model": "account.move",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Customer (Billing)",
+            "expected_model": "account.move",
+            "expected_field": "partner_id",
+            "predicted_model": "account.move",
+            "predicted_field": "partner_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Invoice Date...",
+            "expected_model": "account.move",
+            "expected_field": "invoice_date",
+            "predicted_model": "account.move",
+            "predicted_field": "date",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Due Date (Payment)",
+            "expected_model": "account.move",
+            "expected_field": "invoice_date_due",
+            "predicted_model": "account.move",
+            "predicted_field": "date",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Subtotal?",
+            "expected_model": "account.move",
+            "expected_field": "amount_untaxed",
+            "predicted_model": "account.move",
+            "predicted_field": "amount_untaxed",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Tax Amount*",
+            "expected_model": "account.move",
+            "expected_field": "amount_tax",
+            "predicted_model": "account.move",
+            "predicted_field": "amount_tax",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Total...",
+            "expected_model": "account.move",
+            "expected_field": "amount_total",
+            "predicted_model": "account.move",
+            "predicted_field": "amount_total",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Status (Current)",
+            "expected_model": "account.move",
+            "expected_field": "state",
+            "predicted_model": "account.move",
+            "predicted_field": "state",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Invoices (Messy)",
+        "test_key": "invoices_messy",
+        "total_fields": 8,
+        "correct": 7,
+        "incorrect": 1,
+        "missing": 0,
+        "accuracy": 0.875,
+        "threshold": 0.85,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Invoice Number",
+            "expected_model": "account.move",
+            "expected_field": "name",
+            "predicted_model": "account.move",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Customer",
+            "expected_model": "account.move",
+            "expected_field": "partner_id",
+            "predicted_model": "account.move",
+            "predicted_field": "partner_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Invoice Date",
+            "expected_model": "account.move",
+            "expected_field": "invoice_date",
+            "predicted_model": "account.move",
+            "predicted_field": "date",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Due Date",
+            "expected_model": "account.move",
+            "expected_field": "invoice_date_due",
+            "predicted_model": "account.move",
+            "predicted_field": "invoice_date_due",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Subtotal",
+            "expected_model": "account.move",
+            "expected_field": "amount_untaxed",
+            "predicted_model": "account.move",
+            "predicted_field": "amount_untaxed",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Tax Amount",
+            "expected_model": "account.move",
+            "expected_field": "amount_tax",
+            "predicted_model": "account.move",
+            "predicted_field": "amount_tax",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Total",
+            "expected_model": "account.move",
+            "expected_field": "amount_total",
+            "predicted_model": "account.move",
+            "predicted_field": "amount_total",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Status",
+            "expected_model": "account.move",
+            "expected_field": "state",
+            "predicted_model": "account.move",
+            "predicted_field": "state",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.125
+    },
+    {
+      "test_name": "Leads (Messy)",
+      "test_key": "leads_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Leads (Messy)",
+        "test_key": "leads_messy",
+        "total_fields": 10,
+        "correct": 6,
+        "incorrect": 4,
+        "missing": 0,
+        "accuracy": 0.6,
+        "threshold": 0.8,
+        "passed": false,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Opportunity Title*",
+            "expected_model": "crm.lead",
+            "expected_field": "name",
+            "predicted_model": "crm.lead",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Email (Contact)",
+            "expected_model": "crm.lead",
+            "expected_field": "email_from",
+            "predicted_model": "crm.lead",
+            "predicted_field": "partner_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Phone #",
+            "expected_model": "crm.lead",
+            "expected_field": "phone",
+            "predicted_model": "crm.lead",
+            "predicted_field": "phone",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Street Address (Contact)",
+            "expected_model": "crm.lead",
+            "expected_field": "street",
+            "predicted_model": "crm.lead",
+            "predicted_field": "partner_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "City (Contact)",
+            "expected_model": "crm.lead",
+            "expected_field": "city",
+            "predicted_model": "crm.lead",
+            "predicted_field": "partner_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Zip (Contact)",
+            "expected_model": "crm.lead",
+            "expected_field": "zip",
+            "predicted_model": "crm.lead",
+            "predicted_field": "partner_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Lead Status...",
+            "expected_model": "crm.lead",
+            "expected_field": "stage_id",
+            "predicted_model": "crm.lead",
+            "predicted_field": "stage_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Salesperson (Owner)",
+            "expected_model": "crm.lead",
+            "expected_field": "user_id",
+            "predicted_model": "crm.lead",
+            "predicted_field": "user_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Source?",
+            "expected_model": "crm.lead",
+            "expected_field": "source_id",
+            "predicted_model": "crm.lead",
+            "predicted_field": "source_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Expected Revenue (USD)",
+            "expected_model": "crm.lead",
+            "expected_field": "expected_revenue",
+            "predicted_model": "crm.lead",
+            "predicted_field": "expected_revenue",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Leads (Messy)",
+        "test_key": "leads_messy",
+        "total_fields": 10,
+        "correct": 10,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.8,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Opportunity Title",
+            "expected_model": "crm.lead",
+            "expected_field": "name",
+            "predicted_model": "crm.lead",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Email",
+            "expected_model": "crm.lead",
+            "expected_field": "email_from",
+            "predicted_model": "crm.lead",
+            "predicted_field": "email_from",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Phone",
+            "expected_model": "crm.lead",
+            "expected_field": "phone",
+            "predicted_model": "crm.lead",
+            "predicted_field": "phone",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Street Address",
+            "expected_model": "crm.lead",
+            "expected_field": "street",
+            "predicted_model": "crm.lead",
+            "predicted_field": "street",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "City",
+            "expected_model": "crm.lead",
+            "expected_field": "city",
+            "predicted_model": "crm.lead",
+            "predicted_field": "city",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Zip",
+            "expected_model": "crm.lead",
+            "expected_field": "zip",
+            "predicted_model": "crm.lead",
+            "predicted_field": "zip",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Lead Status",
+            "expected_model": "crm.lead",
+            "expected_field": "stage_id",
+            "predicted_model": "crm.lead",
+            "predicted_field": "stage_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Salesperson",
+            "expected_model": "crm.lead",
+            "expected_field": "user_id",
+            "predicted_model": "crm.lead",
+            "predicted_field": "user_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Source",
+            "expected_model": "crm.lead",
+            "expected_field": "source_id",
+            "predicted_model": "crm.lead",
+            "predicted_field": "source_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Expected Revenue",
+            "expected_model": "crm.lead",
+            "expected_field": "expected_revenue",
+            "predicted_model": "crm.lead",
+            "predicted_field": "expected_revenue",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.4
+    },
+    {
+      "test_name": "Projects (Messy)",
+      "test_key": "projects_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Projects (Messy)",
+        "test_key": "projects_messy",
+        "total_fields": 6,
+        "correct": 5,
+        "incorrect": 1,
+        "missing": 0,
+        "accuracy": 0.8333333333333334,
+        "threshold": 0.75,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Project Name*",
+            "expected_model": "project.project",
+            "expected_field": "name",
+            "predicted_model": "project.project",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Customer (Main)",
+            "expected_model": "project.project",
+            "expected_field": "partner_id",
+            "predicted_model": "project.project",
+            "predicted_field": "partner_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Project Manager (Assigned)",
+            "expected_model": "project.project",
+            "expected_field": "user_id",
+            "predicted_model": "project.project",
+            "predicted_field": "name",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Start Date...",
+            "expected_model": "project.project",
+            "expected_field": "date_start",
+            "predicted_model": "project.project",
+            "predicted_field": "date_start",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Deadline (Target)",
+            "expected_model": "project.project",
+            "expected_field": "date",
+            "predicted_model": "project.project",
+            "predicted_field": "date",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Active?",
+            "expected_model": "project.project",
+            "expected_field": "active",
+            "predicted_model": "project.project",
+            "predicted_field": "active",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Projects (Messy)",
+        "test_key": "projects_messy",
+        "total_fields": 6,
+        "correct": 6,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.75,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Project Name",
+            "expected_model": "project.project",
+            "expected_field": "name",
+            "predicted_model": "project.project",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Customer",
+            "expected_model": "project.project",
+            "expected_field": "partner_id",
+            "predicted_model": "project.project",
+            "predicted_field": "partner_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Project Manager",
+            "expected_model": "project.project",
+            "expected_field": "user_id",
+            "predicted_model": "project.project",
+            "predicted_field": "user_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Start Date",
+            "expected_model": "project.project",
+            "expected_field": "date_start",
+            "predicted_model": "project.project",
+            "predicted_field": "date_start",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Deadline",
+            "expected_model": "project.project",
+            "expected_field": "date",
+            "predicted_model": "project.project",
+            "predicted_field": "date",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Active",
+            "expected_model": "project.project",
+            "expected_field": "active",
+            "predicted_model": "project.project",
+            "predicted_field": "active",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.16666666666666663
+    },
+    {
+      "test_name": "Tasks (Messy)",
+      "test_key": "tasks_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Tasks (Messy)",
+        "test_key": "tasks_messy",
+        "total_fields": 6,
+        "correct": 6,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.75,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Task Title...",
+            "expected_model": "project.task",
+            "expected_field": "name",
+            "predicted_model": "project.task",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Project (Parent)",
+            "expected_model": "project.task",
+            "expected_field": "project_id",
+            "predicted_model": "project.task",
+            "predicted_field": "project_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Assigned To (User)",
+            "expected_model": "project.task",
+            "expected_field": "user_id",
+            "predicted_model": "project.task",
+            "predicted_field": "user_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Due Date*",
+            "expected_model": "project.task",
+            "expected_field": "date_deadline",
+            "predicted_model": "project.task",
+            "predicted_field": "date_deadline",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Priority Level?",
+            "expected_model": "project.task",
+            "expected_field": "priority",
+            "predicted_model": "project.task",
+            "predicted_field": "priority",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Status (Kanban)",
+            "expected_model": "project.task",
+            "expected_field": "kanban_state",
+            "predicted_model": "project.task",
+            "predicted_field": "kanban_state",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Tasks (Messy)",
+        "test_key": "tasks_messy",
+        "total_fields": 6,
+        "correct": 6,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.75,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Task Title",
+            "expected_model": "project.task",
+            "expected_field": "name",
+            "predicted_model": "project.task",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Project",
+            "expected_model": "project.task",
+            "expected_field": "project_id",
+            "predicted_model": "project.task",
+            "predicted_field": "project_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Assigned To",
+            "expected_model": "project.task",
+            "expected_field": "user_id",
+            "predicted_model": "project.task",
+            "predicted_field": "user_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Due Date",
+            "expected_model": "project.task",
+            "expected_field": "date_deadline",
+            "predicted_model": "project.task",
+            "predicted_field": "date_deadline",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Priority Level",
+            "expected_model": "project.task",
+            "expected_field": "priority",
+            "predicted_model": "project.task",
+            "predicted_field": "priority",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Status",
+            "expected_model": "project.task",
+            "expected_field": "kanban_state",
+            "predicted_model": "project.task",
+            "predicted_field": "kanban_state",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.0
+    },
+    {
+      "test_name": "Vehicles (Messy)",
+      "test_key": "vehicles_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Vehicles (Messy)",
+        "test_key": "vehicles_messy",
+        "total_fields": 7,
+        "correct": 7,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.8,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "VIN #",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "vin",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "vin",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "License Plate...",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "license_plate",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "license_plate",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Vehicle Model (Year)",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "model_id",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "model_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Driver (Assigned)",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "driver_id",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "driver_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Acquisition Date*",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "acquisition_date",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "acquisition_date",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Odometer Reading (Miles)",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "odometer",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "odometer",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Active?",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "active",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "active",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Vehicles (Messy)",
+        "test_key": "vehicles_messy",
+        "total_fields": 7,
+        "correct": 7,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.8,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "VIN",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "vin",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "vin",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "License Plate",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "license_plate",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "license_plate",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Vehicle Model",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "model_id",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "model_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Driver",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "driver_id",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "driver_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Acquisition Date",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "acquisition_date",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "acquisition_date",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Odometer Reading",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "odometer",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "odometer",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Active",
+            "expected_model": "fleet.vehicle",
+            "expected_field": "active",
+            "predicted_model": "fleet.vehicle",
+            "predicted_field": "active",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.0
+    },
+    {
+      "test_name": "Sale Order Lines (Messy)",
+      "test_key": "sale_order_lines_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Sale Order Lines (Messy)",
+        "test_key": "sale_order_lines_messy",
+        "total_fields": 7,
+        "correct": 6,
+        "incorrect": 1,
+        "missing": 0,
+        "accuracy": 0.8571428571428571,
+        "threshold": 0.85,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Order Number*",
+            "expected_model": "sale.order.line",
+            "expected_field": "order_id",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "order_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Product (Item)",
+            "expected_model": "sale.order.line",
+            "expected_field": "product_id",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "product_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Description...",
+            "expected_model": "sale.order.line",
+            "expected_field": "name",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Quantity (Ordered)",
+            "expected_model": "sale.order.line",
+            "expected_field": "product_uom_qty",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "order_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2717 WRONG"
+          },
+          {
+            "column": "Unit Price?",
+            "expected_model": "sale.order.line",
+            "expected_field": "price_unit",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "price_unit",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Discount %*",
+            "expected_model": "sale.order.line",
+            "expected_field": "discount",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "discount",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Subtotal (Net)",
+            "expected_model": "sale.order.line",
+            "expected_field": "price_subtotal",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "price_subtotal",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Sale Order Lines (Messy)",
+        "test_key": "sale_order_lines_messy",
+        "total_fields": 7,
+        "correct": 7,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.85,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Order Number",
+            "expected_model": "sale.order.line",
+            "expected_field": "order_id",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "order_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Product",
+            "expected_model": "sale.order.line",
+            "expected_field": "product_id",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "product_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Description",
+            "expected_model": "sale.order.line",
+            "expected_field": "name",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "name",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Quantity",
+            "expected_model": "sale.order.line",
+            "expected_field": "product_uom_qty",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "product_uom_qty",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Unit Price",
+            "expected_model": "sale.order.line",
+            "expected_field": "price_unit",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "price_unit",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Discount %",
+            "expected_model": "sale.order.line",
+            "expected_field": "discount",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "discount",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Subtotal",
+            "expected_model": "sale.order.line",
+            "expected_field": "price_subtotal",
+            "predicted_model": "sale.order.line",
+            "predicted_field": "price_subtotal",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.1428571428571429
+    },
+    {
+      "test_name": "Financial Analysis (Messy)",
+      "test_key": "financial_analysis_messy",
+      "raw": {
+        "label": "RAW",
+        "test_name": "Financial Analysis (Messy)",
+        "test_key": "financial_analysis_messy",
+        "total_fields": 9,
+        "correct": 9,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.7,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Date (Transaction)",
+            "expected_model": "account.analytic.line",
+            "expected_field": "date",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "date",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Product*",
+            "expected_model": "account.analytic.line",
+            "expected_field": "product_id",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "product_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Segment (Market)",
+            "expected_model": "account.analytic.line",
+            "expected_field": "account_id",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "account_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Country (Region)",
+            "expected_model": "account.analytic.line",
+            "expected_field": "partner_id",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "partner_id",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Units Sold...",
+            "expected_model": "account.analytic.line",
+            "expected_field": "unit_amount",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "unit_amount",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Revenue (Gross)?",
+            "expected_model": "account.analytic.line",
+            "expected_field": "amount",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "amount",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "COGS*",
+            "expected_model": "account.analytic.line",
+            "expected_field": "x_cogs",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "x_cogs",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Profit (Net)",
+            "expected_model": "account.analytic.line",
+            "expected_field": "x_profit",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "x_profit",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Discount Band (Tier)",
+            "expected_model": "account.analytic.line",
+            "expected_field": "tag_ids",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "tag_ids",
+            "confidence": 0.9,
+            "method": "substring_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "cleaned": {
+        "label": "CLEANED",
+        "test_name": "Financial Analysis (Messy)",
+        "test_key": "financial_analysis_messy",
+        "total_fields": 9,
+        "correct": 9,
+        "incorrect": 0,
+        "missing": 0,
+        "accuracy": 1.0,
+        "threshold": 0.7,
+        "passed": true,
+        "critical": false,
+        "column_results": [
+          {
+            "column": "Date",
+            "expected_model": "account.analytic.line",
+            "expected_field": "date",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "date",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Product",
+            "expected_model": "account.analytic.line",
+            "expected_field": "product_id",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "product_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Segment",
+            "expected_model": "account.analytic.line",
+            "expected_field": "account_id",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "account_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Country",
+            "expected_model": "account.analytic.line",
+            "expected_field": "partner_id",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "partner_id",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Units Sold",
+            "expected_model": "account.analytic.line",
+            "expected_field": "unit_amount",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "unit_amount",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Revenue",
+            "expected_model": "account.analytic.line",
+            "expected_field": "amount",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "amount",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "COGS",
+            "expected_model": "account.analytic.line",
+            "expected_field": "x_cogs",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "x_cogs",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Profit",
+            "expected_model": "account.analytic.line",
+            "expected_field": "x_profit",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "x_profit",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          },
+          {
+            "column": "Discount Band",
+            "expected_model": "account.analytic.line",
+            "expected_field": "tag_ids",
+            "predicted_model": "account.analytic.line",
+            "predicted_field": "tag_ids",
+            "confidence": 1.0,
+            "method": "exact_pattern",
+            "status": "\u2713"
+          }
+        ]
+      },
+      "improvement": 0.0
+    }
+  ]
+}

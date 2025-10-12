@@ -16,6 +16,14 @@ except ImportError:
     DETERMINISTIC_MAPPER_AVAILABLE = False
     DeterministicFieldMapper = None
 
+# Import hybrid matcher
+try:
+    from app.core.hybrid_matcher import HybridMatcher
+    HYBRID_MATCHER_AVAILABLE = True
+except ImportError:
+    HYBRID_MATCHER_AVAILABLE = False
+    HybridMatcher = None
+
 
 class MappingService:
     def __init__(self, db: Session):
@@ -30,6 +38,17 @@ class MappingService:
                     self.deterministic_mapper = DeterministicFieldMapper(dictionary_path)
                 except Exception as e:
                     print(f"Warning: Could not initialize DeterministicFieldMapper: {e}")
+
+        # Initialize hybrid matcher (best of both worlds)
+        self.hybrid_matcher = None
+        if HYBRID_MATCHER_AVAILABLE:
+            dictionary_path = Path(settings.ODOO_DICTIONARY_PATH)
+            if dictionary_path.exists():
+                try:
+                    self.hybrid_matcher = HybridMatcher(dictionary_path)
+                    print(f"✓ Initialized HybridMatcher with knowledge base")
+                except Exception as e:
+                    print(f"Warning: Could not initialize HybridMatcher: {e}")
 
     def get_mappings_for_dataset(self, dataset_id: int):
         """Get all mappings for a dataset."""
@@ -205,6 +224,86 @@ class MappingService:
                 print(f"ERROR: Traceback: {traceback.format_exc()}")
                 continue
 
+        return all_mappings
+
+    async def generate_mappings_hybrid(self, dataset_id: int):
+        """
+        Generate mapping suggestions using the HybridMatcher.
+
+        This combines:
+        - BusinessContextAnalyzer (intelligent model detection)
+        - OdooKnowledgeBase (authoritative field metadata)
+        - Hardcoded patterns (deterministic, proven matches)
+
+        Falls back to v1 (simple matcher) if hybrid matcher is not available.
+        """
+        # Fall back to v1 if hybrid matcher not available
+        if not self.hybrid_matcher:
+            print("HybridMatcher not available, falling back to simple matcher")
+            return await self.generate_mappings(dataset_id)
+
+        # Delete existing mappings for this dataset before generating new ones
+        self.db.query(Mapping).filter(Mapping.dataset_id == dataset_id).delete()
+        self.db.commit()
+
+        # Get dataset with sheets
+        dataset = self.db.query(Dataset).filter(Dataset.id == dataset_id).first()
+        if not dataset:
+            return []
+
+        all_mappings = []
+
+        # Process each sheet
+        for sheet in dataset.sheets:
+            # Get all column profiles for this sheet
+            profiles = self.db.query(ColumnProfile).filter(
+                ColumnProfile.sheet_id == sheet.id
+            ).all()
+
+            # Get all column names for model detection
+            column_names = [p.name for p in profiles]
+
+            print(f"Processing sheet '{sheet.name}' with {len(column_names)} columns using HybridMatcher")
+
+            # Generate mapping for each column
+            for profile in profiles:
+                # Get suggestions from hybrid matcher with full context
+                candidates = self.hybrid_matcher.match(
+                    header=profile.name,
+                    sheet_name=sheet.name,
+                    column_names=column_names
+                )
+
+                # Create mapping record with top suggestion
+                top_candidate = candidates[0] if candidates else None
+
+                mapping = Mapping(
+                    dataset_id=dataset_id,
+                    sheet_id=sheet.id,
+                    header_name=profile.name,
+                    target_model=top_candidate["model"] if top_candidate else None,
+                    target_field=top_candidate["field"] if top_candidate else None,
+                    confidence=top_candidate["confidence"] if top_candidate else 0.0,
+                    status=MappingStatus.PENDING,
+                    chosen=False,
+                    rationale=top_candidate["rationale"] if top_candidate else None,
+                )
+                self.db.add(mapping)
+                self.db.flush()  # Get the mapping ID
+
+                # Store all candidates as suggestions
+                if candidates:
+                    suggestion = Suggestion(
+                        mapping_id=mapping.id,
+                        candidates=candidates  # Store as JSON
+                    )
+                    self.db.add(suggestion)
+
+                all_mappings.append(mapping)
+
+            self.db.commit()
+
+        print(f"✓ Generated {len(all_mappings)} mappings using HybridMatcher")
         return all_mappings
 
     def update_mapping(self, mapping_id: int, mapping_data: MappingUpdate):

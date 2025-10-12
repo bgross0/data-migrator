@@ -47,15 +47,17 @@ class ContextualMatchStrategy(BaseStrategy):
         column_name = context.column_profile.column_name
         logger.debug(f"ContextualMatch: Analyzing '{column_name}' with context")
 
-        # Detect likely models from all columns in the sheet
-        likely_models = self._detect_likely_models(context)
+        # USE the candidate_models from BusinessContextAnalyzer instead of re-detecting
+        # This fixes the issue where naive voting detects random models
+        likely_models = context.candidate_models if context.candidate_models else set()
 
+        # Fallback: if no candidate models provided, use a sensible default
         if not likely_models:
-            logger.debug("ContextualMatch: No likely models detected from context")
-            return []
+            logger.debug("ContextualMatch: No candidate models from context, using fallback")
+            likely_models = {"res.partner", "product.product", "sale.order", "account.move"}
 
         logger.info(
-            f"ContextualMatch: Detected likely models: "
+            f"ContextualMatch: Using candidate models from BusinessContextAnalyzer: "
             f"{', '.join(list(likely_models)[:5])}"
         )
 

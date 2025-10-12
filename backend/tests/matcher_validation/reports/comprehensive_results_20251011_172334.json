@@ -1,0 +1,981 @@
+{
+  "summary": {
+    "total_test_cases": 10,
+    "passed": 5,
+    "failed": 5,
+    "total_fields": 75,
+    "correct": 57,
+    "incorrect": 6,
+    "missing": 12,
+    "overall_accuracy": 0.76,
+    "duration_seconds": 0.10979,
+    "timestamp": "2025-10-11T17:23:33.906423"
+  },
+  "test_cases": [
+    {
+      "test_name": "Customers",
+      "test_key": "customers",
+      "total_fields": 9,
+      "correct": 8,
+      "incorrect": 0,
+      "missing": 1,
+      "accuracy": 0.8888888888888888,
+      "threshold": 0.9,
+      "passed": false,
+      "critical": true,
+      "column_results": [
+        {
+          "column": "Customer Name",
+          "expected_model": "res.partner",
+          "expected_field": "name",
+          "predicted_model": "res.partner",
+          "predicted_field": "name",
+          "confidence": 0.85,
+          "method": "substring_pattern",
+          "status": "CORRECT",
+          "rationale": "Substring pattern match: 'Customer Name' contains/matches 'name' \u2192 'name'"
+        },
+        {
+          "column": "Contact Email",
+          "expected_model": "res.partner",
+          "expected_field": "email",
+          "predicted_model": "res.partner",
+          "predicted_field": "email",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Contact Email' \u2192 'email'"
+        },
+        {
+          "column": "Phone",
+          "expected_model": "res.partner",
+          "expected_field": "phone",
+          "predicted_model": "res.partner",
+          "predicted_field": "phone",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Phone' \u2192 'phone'"
+        },
+        {
+          "column": "Street Address",
+          "expected_model": "res.partner",
+          "expected_field": "street",
+          "predicted_model": "res.partner",
+          "predicted_field": "street",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Street Address' \u2192 'street'"
+        },
+        {
+          "column": "City",
+          "expected_model": "res.partner",
+          "expected_field": "city",
+          "predicted_model": "res.partner",
+          "predicted_field": "city",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'City' \u2192 'city'"
+        },
+        {
+          "column": "State",
+          "expected_model": "res.partner",
+          "expected_field": "state_id",
+          "predicted_model": "res.partner",
+          "predicted_field": "state_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'State' \u2192 'state_id'"
+        },
+        {
+          "column": "Zip Code",
+          "expected_model": "res.partner",
+          "expected_field": "zip",
+          "predicted_model": "res.partner",
+          "predicted_field": "zip",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Zip Code' \u2192 'zip'"
+        },
+        {
+          "column": "Annual Revenue",
+          "expected_model": "res.partner",
+          "expected_field": "x_annual_revenue",
+          "predicted_model": "res.partner",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in res.partner for 'Annual Revenue'"
+        },
+        {
+          "column": "Customer ID",
+          "expected_model": "res.partner",
+          "expected_field": "ref",
+          "predicted_model": "res.partner",
+          "predicted_field": "ref",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Customer ID' \u2192 'ref'"
+        }
+      ]
+    },
+    {
+      "test_name": "Products",
+      "test_key": "products",
+      "total_fields": 7,
+      "correct": 7,
+      "incorrect": 0,
+      "missing": 0,
+      "accuracy": 1.0,
+      "threshold": 0.9,
+      "passed": true,
+      "critical": true,
+      "column_results": [
+        {
+          "column": "Product Name",
+          "expected_model": "product.product",
+          "expected_field": "name",
+          "predicted_model": "product.product",
+          "predicted_field": "name",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Product Name' \u2192 'name'"
+        },
+        {
+          "column": "SKU",
+          "expected_model": "product.product",
+          "expected_field": "default_code",
+          "predicted_model": "product.product",
+          "predicted_field": "default_code",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'SKU' \u2192 'default_code'"
+        },
+        {
+          "column": "Sale Price",
+          "expected_model": "product.product",
+          "expected_field": "list_price",
+          "predicted_model": "product.product",
+          "predicted_field": "list_price",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Sale Price' \u2192 'list_price'"
+        },
+        {
+          "column": "Cost Price",
+          "expected_model": "product.product",
+          "expected_field": "standard_price",
+          "predicted_model": "product.product",
+          "predicted_field": "standard_price",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Cost Price' \u2192 'standard_price'"
+        },
+        {
+          "column": "Category",
+          "expected_model": "product.product",
+          "expected_field": "categ_id",
+          "predicted_model": "product.product",
+          "predicted_field": "categ_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Category' \u2192 'categ_id'"
+        },
+        {
+          "column": "Barcode",
+          "expected_model": "product.product",
+          "expected_field": "barcode",
+          "predicted_model": "product.product",
+          "predicted_field": "barcode",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Barcode' \u2192 'barcode'"
+        },
+        {
+          "column": "Active",
+          "expected_model": "product.product",
+          "expected_field": "active",
+          "predicted_model": "product.product",
+          "predicted_field": "active",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Active' \u2192 'active'"
+        }
+      ]
+    },
+    {
+      "test_name": "Sales Orders",
+      "test_key": "sales_orders",
+      "total_fields": 6,
+      "correct": 6,
+      "incorrect": 0,
+      "missing": 0,
+      "accuracy": 1.0,
+      "threshold": 0.85,
+      "passed": true,
+      "critical": true,
+      "column_results": [
+        {
+          "column": "Order Number",
+          "expected_model": "sale.order",
+          "expected_field": "name",
+          "predicted_model": "sale.order",
+          "predicted_field": "name",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Order Number' \u2192 'name'"
+        },
+        {
+          "column": "Customer",
+          "expected_model": "sale.order",
+          "expected_field": "partner_id",
+          "predicted_model": "sale.order",
+          "predicted_field": "partner_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Customer' \u2192 'partner_id'"
+        },
+        {
+          "column": "Order Date",
+          "expected_model": "sale.order",
+          "expected_field": "date_order",
+          "predicted_model": "sale.order",
+          "predicted_field": "date_order",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Order Date' \u2192 'date_order'"
+        },
+        {
+          "column": "Total",
+          "expected_model": "sale.order",
+          "expected_field": "amount_total",
+          "predicted_model": "sale.order",
+          "predicted_field": "amount_total",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Total' \u2192 'amount_total'"
+        },
+        {
+          "column": "Status",
+          "expected_model": "sale.order",
+          "expected_field": "state",
+          "predicted_model": "sale.order",
+          "predicted_field": "state",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Status' \u2192 'state'"
+        },
+        {
+          "column": "Salesperson",
+          "expected_model": "sale.order",
+          "expected_field": "user_id",
+          "predicted_model": "sale.order",
+          "predicted_field": "user_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Salesperson' \u2192 'user_id'"
+        }
+      ]
+    },
+    {
+      "test_name": "Invoices",
+      "test_key": "invoices",
+      "total_fields": 8,
+      "correct": 7,
+      "incorrect": 1,
+      "missing": 0,
+      "accuracy": 0.875,
+      "threshold": 0.85,
+      "passed": true,
+      "critical": false,
+      "column_results": [
+        {
+          "column": "Invoice Number",
+          "expected_model": "account.move",
+          "expected_field": "name",
+          "predicted_model": "account.move",
+          "predicted_field": "name",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Invoice Number' \u2192 'name'"
+        },
+        {
+          "column": "Customer",
+          "expected_model": "account.move",
+          "expected_field": "partner_id",
+          "predicted_model": "account.move",
+          "predicted_field": "partner_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Customer' \u2192 'partner_id'"
+        },
+        {
+          "column": "Invoice Date",
+          "expected_model": "account.move",
+          "expected_field": "invoice_date",
+          "predicted_model": "account.move",
+          "predicted_field": "date",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "WRONG",
+          "rationale": "Exact pattern match: 'Invoice Date' \u2192 'date'"
+        },
+        {
+          "column": "Due Date",
+          "expected_model": "account.move",
+          "expected_field": "invoice_date_due",
+          "predicted_model": "account.move",
+          "predicted_field": "invoice_date_due",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Due Date' \u2192 'invoice_date_due'"
+        },
+        {
+          "column": "Subtotal",
+          "expected_model": "account.move",
+          "expected_field": "amount_untaxed",
+          "predicted_model": "account.move",
+          "predicted_field": "amount_untaxed",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Subtotal' \u2192 'amount_untaxed'"
+        },
+        {
+          "column": "Tax",
+          "expected_model": "account.move",
+          "expected_field": "amount_tax",
+          "predicted_model": "account.move",
+          "predicted_field": "amount_tax",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Tax' \u2192 'amount_tax'"
+        },
+        {
+          "column": "Total",
+          "expected_model": "account.move",
+          "expected_field": "amount_total",
+          "predicted_model": "account.move",
+          "predicted_field": "amount_total",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Total' \u2192 'amount_total'"
+        },
+        {
+          "column": "Status",
+          "expected_model": "account.move",
+          "expected_field": "state",
+          "predicted_model": "account.move",
+          "predicted_field": "state",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Status' \u2192 'state'"
+        }
+      ]
+    },
+    {
+      "test_name": "Leads",
+      "test_key": "leads",
+      "total_fields": 10,
+      "correct": 7,
+      "incorrect": 3,
+      "missing": 0,
+      "accuracy": 0.7,
+      "threshold": 0.8,
+      "passed": false,
+      "critical": false,
+      "column_results": [
+        {
+          "column": "Opportunity Title",
+          "expected_model": "crm.lead",
+          "expected_field": "name",
+          "predicted_model": "crm.lead",
+          "predicted_field": "name",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Opportunity Title' \u2192 'name'"
+        },
+        {
+          "column": "Email",
+          "expected_model": "crm.lead",
+          "expected_field": "email_from",
+          "predicted_model": "crm.lead",
+          "predicted_field": "email_from",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Email' \u2192 'email_from'"
+        },
+        {
+          "column": "Phone",
+          "expected_model": "crm.lead",
+          "expected_field": "phone",
+          "predicted_model": "crm.lead",
+          "predicted_field": "phone",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Phone' \u2192 'phone'"
+        },
+        {
+          "column": "Street Address (Contact)",
+          "expected_model": "crm.lead",
+          "expected_field": "street",
+          "predicted_model": "crm.lead",
+          "predicted_field": "partner_id",
+          "confidence": 0.85,
+          "method": "substring_pattern",
+          "status": "WRONG",
+          "rationale": "Substring pattern match: 'Street Address (Contact)' contains/matches 'contact' \u2192 'partner_id'"
+        },
+        {
+          "column": "City (Contact)",
+          "expected_model": "crm.lead",
+          "expected_field": "city",
+          "predicted_model": "crm.lead",
+          "predicted_field": "partner_id",
+          "confidence": 0.85,
+          "method": "substring_pattern",
+          "status": "WRONG",
+          "rationale": "Substring pattern match: 'City (Contact)' contains/matches 'contact' \u2192 'partner_id'"
+        },
+        {
+          "column": "Zip (Contact)",
+          "expected_model": "crm.lead",
+          "expected_field": "zip",
+          "predicted_model": "crm.lead",
+          "predicted_field": "partner_id",
+          "confidence": 0.85,
+          "method": "substring_pattern",
+          "status": "WRONG",
+          "rationale": "Substring pattern match: 'Zip (Contact)' contains/matches 'contact' \u2192 'partner_id'"
+        },
+        {
+          "column": "Lead Status",
+          "expected_model": "crm.lead",
+          "expected_field": "stage_id",
+          "predicted_model": "crm.lead",
+          "predicted_field": "stage_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Lead Status' \u2192 'stage_id'"
+        },
+        {
+          "column": "Salesperson",
+          "expected_model": "crm.lead",
+          "expected_field": "user_id",
+          "predicted_model": "crm.lead",
+          "predicted_field": "user_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Salesperson' \u2192 'user_id'"
+        },
+        {
+          "column": "Source",
+          "expected_model": "crm.lead",
+          "expected_field": "source_id",
+          "predicted_model": "crm.lead",
+          "predicted_field": "source_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Source' \u2192 'source_id'"
+        },
+        {
+          "column": "Expected Revenue",
+          "expected_model": "crm.lead",
+          "expected_field": "expected_revenue",
+          "predicted_model": "crm.lead",
+          "predicted_field": "expected_revenue",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Expected Revenue' \u2192 'expected_revenue'"
+        }
+      ]
+    },
+    {
+      "test_name": "Projects",
+      "test_key": "projects",
+      "total_fields": 6,
+      "correct": 6,
+      "incorrect": 0,
+      "missing": 0,
+      "accuracy": 1.0,
+      "threshold": 0.75,
+      "passed": true,
+      "critical": false,
+      "column_results": [
+        {
+          "column": "Project Name",
+          "expected_model": "project.project",
+          "expected_field": "name",
+          "predicted_model": "project.project",
+          "predicted_field": "name",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Project Name' \u2192 'name'"
+        },
+        {
+          "column": "Customer",
+          "expected_model": "project.project",
+          "expected_field": "partner_id",
+          "predicted_model": "project.project",
+          "predicted_field": "partner_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Customer' \u2192 'partner_id'"
+        },
+        {
+          "column": "Project Manager",
+          "expected_model": "project.project",
+          "expected_field": "user_id",
+          "predicted_model": "project.project",
+          "predicted_field": "user_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Project Manager' \u2192 'user_id'"
+        },
+        {
+          "column": "Start Date",
+          "expected_model": "project.project",
+          "expected_field": "date_start",
+          "predicted_model": "project.project",
+          "predicted_field": "date_start",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Start Date' \u2192 'date_start'"
+        },
+        {
+          "column": "Deadline",
+          "expected_model": "project.project",
+          "expected_field": "date",
+          "predicted_model": "project.project",
+          "predicted_field": "date",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Deadline' \u2192 'date'"
+        },
+        {
+          "column": "Active",
+          "expected_model": "project.project",
+          "expected_field": "active",
+          "predicted_model": "project.project",
+          "predicted_field": "active",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Active' \u2192 'active'"
+        }
+      ]
+    },
+    {
+      "test_name": "Tasks",
+      "test_key": "tasks",
+      "total_fields": 6,
+      "correct": 4,
+      "incorrect": 1,
+      "missing": 1,
+      "accuracy": 0.6666666666666666,
+      "threshold": 0.75,
+      "passed": false,
+      "critical": false,
+      "column_results": [
+        {
+          "column": "Task Title",
+          "expected_model": "project.task",
+          "expected_field": "name",
+          "predicted_model": "project.task",
+          "predicted_field": "name",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Task Title' \u2192 'name'"
+        },
+        {
+          "column": "Project",
+          "expected_model": "project.task",
+          "expected_field": "project_id",
+          "predicted_model": "project.task",
+          "predicted_field": "project_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Project' \u2192 'project_id'"
+        },
+        {
+          "column": "Assigned To",
+          "expected_model": "project.task",
+          "expected_field": "user_id",
+          "predicted_model": "project.task",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in project.task for 'Assigned To'"
+        },
+        {
+          "column": "Due Date",
+          "expected_model": "project.task",
+          "expected_field": "date_deadline",
+          "predicted_model": "project.task",
+          "predicted_field": "date_deadline",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Due Date' \u2192 'date_deadline'"
+        },
+        {
+          "column": "Priority",
+          "expected_model": "project.task",
+          "expected_field": "priority",
+          "predicted_model": "project.task",
+          "predicted_field": "priority",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Priority' \u2192 'priority'"
+        },
+        {
+          "column": "Status",
+          "expected_model": "project.task",
+          "expected_field": "kanban_state",
+          "predicted_model": "project.task",
+          "predicted_field": "sale_order_state",
+          "confidence": 0.95,
+          "method": "kb_label",
+          "status": "WRONG",
+          "rationale": "Knowledge base label match: 'Status' \u2192 project.task.sale_order_state"
+        }
+      ]
+    },
+    {
+      "test_name": "Vehicles",
+      "test_key": "vehicles",
+      "total_fields": 7,
+      "correct": 0,
+      "incorrect": 0,
+      "missing": 7,
+      "accuracy": 0.0,
+      "threshold": 0.8,
+      "passed": false,
+      "critical": false,
+      "column_results": [
+        {
+          "column": "VIN",
+          "expected_model": "fleet.vehicle",
+          "expected_field": "vin",
+          "predicted_model": "fleet.vehicle",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in fleet.vehicle for 'VIN'"
+        },
+        {
+          "column": "License Plate",
+          "expected_model": "fleet.vehicle",
+          "expected_field": "license_plate",
+          "predicted_model": "fleet.vehicle",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in fleet.vehicle for 'License Plate'"
+        },
+        {
+          "column": "Vehicle Model",
+          "expected_model": "fleet.vehicle",
+          "expected_field": "model_id",
+          "predicted_model": "fleet.vehicle",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in fleet.vehicle for 'Vehicle Model'"
+        },
+        {
+          "column": "Driver",
+          "expected_model": "fleet.vehicle",
+          "expected_field": "driver_id",
+          "predicted_model": "fleet.vehicle",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in fleet.vehicle for 'Driver'"
+        },
+        {
+          "column": "Acquisition Date",
+          "expected_model": "fleet.vehicle",
+          "expected_field": "acquisition_date",
+          "predicted_model": "fleet.vehicle",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in fleet.vehicle for 'Acquisition Date'"
+        },
+        {
+          "column": "Odometer",
+          "expected_model": "fleet.vehicle",
+          "expected_field": "odometer",
+          "predicted_model": "fleet.vehicle",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in fleet.vehicle for 'Odometer'"
+        },
+        {
+          "column": "Active",
+          "expected_model": "fleet.vehicle",
+          "expected_field": "active",
+          "predicted_model": "fleet.vehicle",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in fleet.vehicle for 'Active'"
+        }
+      ]
+    },
+    {
+      "test_name": "Sale Order Lines",
+      "test_key": "sale_order_lines",
+      "total_fields": 7,
+      "correct": 6,
+      "incorrect": 0,
+      "missing": 1,
+      "accuracy": 0.8571428571428571,
+      "threshold": 0.85,
+      "passed": true,
+      "critical": false,
+      "column_results": [
+        {
+          "column": "Order Number",
+          "expected_model": "sale.order.line",
+          "expected_field": "order_id",
+          "predicted_model": "sale.order.line",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in sale.order.line for 'Order Number'"
+        },
+        {
+          "column": "Product",
+          "expected_model": "sale.order.line",
+          "expected_field": "product_id",
+          "predicted_model": "sale.order.line",
+          "predicted_field": "product_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Product' \u2192 'product_id'"
+        },
+        {
+          "column": "Description",
+          "expected_model": "sale.order.line",
+          "expected_field": "name",
+          "predicted_model": "sale.order.line",
+          "predicted_field": "name",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Description' \u2192 'name'"
+        },
+        {
+          "column": "Quantity",
+          "expected_model": "sale.order.line",
+          "expected_field": "product_uom_qty",
+          "predicted_model": "sale.order.line",
+          "predicted_field": "product_uom_qty",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Quantity' \u2192 'product_uom_qty'"
+        },
+        {
+          "column": "Unit Price",
+          "expected_model": "sale.order.line",
+          "expected_field": "price_unit",
+          "predicted_model": "sale.order.line",
+          "predicted_field": "price_unit",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Unit Price' \u2192 'price_unit'"
+        },
+        {
+          "column": "Discount",
+          "expected_model": "sale.order.line",
+          "expected_field": "discount",
+          "predicted_model": "sale.order.line",
+          "predicted_field": "discount",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Discount' \u2192 'discount'"
+        },
+        {
+          "column": "Subtotal",
+          "expected_model": "sale.order.line",
+          "expected_field": "price_subtotal",
+          "predicted_model": "sale.order.line",
+          "predicted_field": "price_subtotal",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Subtotal' \u2192 'price_subtotal'"
+        }
+      ]
+    },
+    {
+      "test_name": "Financial Analysis",
+      "test_key": "financial_analysis",
+      "total_fields": 9,
+      "correct": 6,
+      "incorrect": 1,
+      "missing": 2,
+      "accuracy": 0.6666666666666666,
+      "threshold": 0.7,
+      "passed": false,
+      "critical": false,
+      "column_results": [
+        {
+          "column": "Date",
+          "expected_model": "account.analytic.line",
+          "expected_field": "date",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": "date",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Date' \u2192 'date'"
+        },
+        {
+          "column": "Product",
+          "expected_model": "account.analytic.line",
+          "expected_field": "product_id",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": "product_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Product' \u2192 'product_id'"
+        },
+        {
+          "column": "Segment",
+          "expected_model": "account.analytic.line",
+          "expected_field": "account_id",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": "account_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Segment' \u2192 'account_id'"
+        },
+        {
+          "column": "Country",
+          "expected_model": "account.analytic.line",
+          "expected_field": "partner_id",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": "partner_id",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Country' \u2192 'partner_id'"
+        },
+        {
+          "column": "Units Sold",
+          "expected_model": "account.analytic.line",
+          "expected_field": "unit_amount",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": "unit_amount",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Units Sold' \u2192 'unit_amount'"
+        },
+        {
+          "column": "Revenue",
+          "expected_model": "account.analytic.line",
+          "expected_field": "amount",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": "amount",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "CORRECT",
+          "rationale": "Exact pattern match: 'Revenue' \u2192 'amount'"
+        },
+        {
+          "column": "COGS",
+          "expected_model": "account.analytic.line",
+          "expected_field": "x_cogs",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in account.analytic.line for 'COGS'"
+        },
+        {
+          "column": "Profit",
+          "expected_model": "account.analytic.line",
+          "expected_field": "x_profit",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": "amount",
+          "confidence": 1.0,
+          "method": "exact_pattern",
+          "status": "WRONG",
+          "rationale": "Exact pattern match: 'Profit' \u2192 'amount'"
+        },
+        {
+          "column": "Discount Band",
+          "expected_model": "account.analytic.line",
+          "expected_field": "tag_ids",
+          "predicted_model": "account.analytic.line",
+          "predicted_field": null,
+          "confidence": 0.0,
+          "method": "no_match",
+          "status": "MISSING",
+          "rationale": "No suitable field found in account.analytic.line for 'Discount Band'"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,280 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Matcher Validation Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        h2 { color: #666; margin-top: 30px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .correct { background-color: #d4edda; }
+        .incorrect { background-color: #f8d7da; }
+        .missing { background-color: #fff3cd; }
+        .metric { font-size: 24px; font-weight: bold; margin: 10px 0; }
+        .summary { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Field Mapper Validation Report</h1>
+    <p>Generated: 2025-10-11 15:07:44</p>
+
+    <div class="summary">
+        <h2>Overall Summary</h2>
+        <p>Tests Run: 3</p>
+        <p>Total Columns: 22</p>
+        <p class="metric">Overall Accuracy: 36.4%</p>
+        <p>Correct: 8 | Incorrect: 9 | Missing: 5</p>
+    </div>
+
+    <h2>Test: customers</h2>
+    <p>Accuracy: <span class="metric">66.7%</span></p>
+
+    <h3>Column Mappings</h3>
+    <table>
+        <tr>
+            <th>Column</th>
+            <th>Expected</th>
+            <th>Predicted</th>
+            <th>Confidence</th>
+            <th>Status</th>
+            <th>Strategy</th>
+        </tr>
+
+        <tr class="correct">
+            <td>Customer Name</td>
+            <td>res.partner.name</td>
+            <td>res.partner.name</td>
+            <td>1.00</td>
+            <td>CORRECT</td>
+            <td>Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy]</td>
+        </tr>
+
+        <tr class="correct">
+            <td>Contact Email</td>
+            <td>res.partner.email</td>
+            <td>res.partner.email</td>
+            <td>1.00</td>
+            <td>CORRECT</td>
+            <td>Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy]</td>
+        </tr>
+
+        <tr class="correct">
+            <td>Phone</td>
+            <td>res.partner.phone</td>
+            <td>res.partner.phone</td>
+            <td>1.00</td>
+            <td>CORRECT</td>
+            <td>Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="correct">
+            <td>Street Address</td>
+            <td>res.partner.street</td>
+            <td>res.partner.street</td>
+            <td>0.63</td>
+            <td>CORRECT</td>
+            <td>Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]</td>
+        </tr>
+
+        <tr class="correct">
+            <td>City</td>
+            <td>res.partner.city</td>
+            <td>res.partner.city</td>
+            <td>1.00</td>
+            <td>CORRECT</td>
+            <td>Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="correct">
+            <td>State</td>
+            <td>res.partner.state_id</td>
+            <td>res.partner.state_id</td>
+            <td>1.00</td>
+            <td>CORRECT</td>
+            <td>Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Zip Code</td>
+            <td>res.partner.zip</td>
+            <td>product.product.code</td>
+            <td>0.77</td>
+            <td>INCORRECT</td>
+            <td>Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]</td>
+        </tr>
+
+        <tr class="missing">
+            <td>Annual Revenue</td>
+            <td>res.partner.x_annual_revenue</td>
+            <td>N/A</td>
+            <td>0.00</td>
+            <td>MISSING</td>
+            <td></td>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Customer ID</td>
+            <td>res.partner.ref</td>
+            <td>res.partner.id</td>
+            <td>1.00</td>
+            <td>INCORRECT</td>
+            <td>ExactNameMatchStrategy</td>
+        </tr>
+
+    </table>
+
+    <h2>Test: products</h2>
+    <p>Accuracy: <span class="metric">14.3%</span></p>
+
+    <h3>Column Mappings</h3>
+    <table>
+        <tr>
+            <th>Column</th>
+            <th>Expected</th>
+            <th>Predicted</th>
+            <th>Confidence</th>
+            <th>Status</th>
+            <th>Strategy</th>
+        </tr>
+
+        <tr class="correct">
+            <td>Product Name</td>
+            <td>product.product.name</td>
+            <td>product.product.name</td>
+            <td>1.00</td>
+            <td>CORRECT</td>
+            <td>Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy]</td>
+        </tr>
+
+        <tr class="missing">
+            <td>SKU</td>
+            <td>product.product.default_code</td>
+            <td>N/A</td>
+            <td>0.00</td>
+            <td>MISSING</td>
+            <td></td>
+        </tr>
+
+        <tr class="missing">
+            <td>Sale Price</td>
+            <td>product.product.list_price</td>
+            <td>N/A</td>
+            <td>0.00</td>
+            <td>MISSING</td>
+            <td></td>
+        </tr>
+
+        <tr class="missing">
+            <td>Cost Price</td>
+            <td>product.product.standard_price</td>
+            <td>N/A</td>
+            <td>0.00</td>
+            <td>MISSING</td>
+            <td></td>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Category</td>
+            <td>product.product.categ_id</td>
+            <td>res.partner.category_id</td>
+            <td>1.00</td>
+            <td>INCORRECT</td>
+            <td>Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Barcode</td>
+            <td>product.product.barcode</td>
+            <td>res.partner.barcode</td>
+            <td>1.00</td>
+            <td>INCORRECT</td>
+            <td>Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Active</td>
+            <td>product.product.active</td>
+            <td>res.partner.active</td>
+            <td>1.00</td>
+            <td>INCORRECT</td>
+            <td>Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+    </table>
+
+    <h2>Test: sales_orders</h2>
+    <p>Accuracy: <span class="metric">16.7%</span></p>
+
+    <h3>Column Mappings</h3>
+    <table>
+        <tr>
+            <th>Column</th>
+            <th>Expected</th>
+            <th>Predicted</th>
+            <th>Confidence</th>
+            <th>Status</th>
+            <th>Strategy</th>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Order Number</td>
+            <td>sale.order.name</td>
+            <td>sale.order.order_line</td>
+            <td>0.63</td>
+            <td>INCORRECT</td>
+            <td>Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]</td>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Customer</td>
+            <td>sale.order.partner_id</td>
+            <td>res.partner.customer_rank</td>
+            <td>0.90</td>
+            <td>INCORRECT</td>
+            <td>Combined[ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="correct">
+            <td>Order Date</td>
+            <td>sale.order.date_order</td>
+            <td>sale.order.date_order</td>
+            <td>1.00</td>
+            <td>CORRECT</td>
+            <td>Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Total</td>
+            <td>sale.order.amount_total</td>
+            <td>purchase.order.amount_total</td>
+            <td>0.71</td>
+            <td>INCORRECT</td>
+            <td>Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="incorrect">
+            <td>Status</td>
+            <td>sale.order.state</td>
+            <td>res.partner.im_status</td>
+            <td>1.00</td>
+            <td>INCORRECT</td>
+            <td>Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]</td>
+        </tr>
+
+        <tr class="missing">
+            <td>Salesperson</td>
+            <td>sale.order.user_id</td>
+            <td>N/A</td>
+            <td>0.00</td>
+            <td>MISSING</td>
+            <td></td>
+        </tr>
+
+    </table>
+
+</body>
+</html>

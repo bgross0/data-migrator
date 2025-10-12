@@ -1,0 +1,23 @@
+test_name,column,expected_model,expected_field,predicted_model,predicted_field,confidence,status,strategy
+customers,Customer Name,res.partner,name,res.partner,name,1.0,CORRECT,"Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+customers,Contact Email,res.partner,email,res.partner,email,1.0,CORRECT,"Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy]"
+customers,Phone,res.partner,phone,res.partner,phone,1.0,CORRECT,"Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+customers,Street Address,res.partner,street,res.partner,street,0.6334615384615384,CORRECT,"Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+customers,City,res.partner,city,res.partner,city,1.0,CORRECT,"Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+customers,State,res.partner,state_id,res.partner,state_id,1.0,CORRECT,"Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+customers,Zip Code,res.partner,zip,product.product,code,0.7735714285714286,INCORRECT,"Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+customers,Annual Revenue,res.partner,x_annual_revenue,,,0.0,MISSING,
+customers,Customer ID,res.partner,ref,res.partner,id,1.0,INCORRECT,ExactNameMatchStrategy
+products,Product Name,product.product,name,product.product,name,1.0,CORRECT,"Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+products,SKU,product.product,default_code,,,0.0,MISSING,
+products,Sale Price,product.product,list_price,,,0.0,MISSING,
+products,Cost Price,product.product,standard_price,,,0.0,MISSING,
+products,Category,product.product,categ_id,res.partner,category_id,1.0,INCORRECT,"Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+products,Barcode,product.product,barcode,res.partner,barcode,1.0,INCORRECT,"Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+products,Active,product.product,active,res.partner,active,1.0,INCORRECT,"Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+sales_orders,Order Number,sale.order,name,sale.order,order_line,0.6266666666666667,INCORRECT,"Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+sales_orders,Customer,sale.order,partner_id,res.partner,customer_rank,0.895,INCORRECT,"Combined[ContextualMatchStrategy, FuzzyMatchStrategy]"
+sales_orders,Order Date,sale.order,date_order,sale.order,date_order,1.0,CORRECT,"Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+sales_orders,Total,sale.order,amount_total,purchase.order,amount_total,0.7145454545454545,INCORRECT,"Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+sales_orders,Status,sale.order,state,res.partner,im_status,1.0,INCORRECT,"Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+sales_orders,Salesperson,sale.order,user_id,,,0.0,MISSING,

@@ -1,0 +1,651 @@
+[
+  {
+    "test_name": "customers",
+    "status": "COMPLETED",
+    "timestamp": "2025-10-11T15:07:44.435788",
+    "total_columns": 9,
+    "columns_mapped": 8,
+    "columns_unmapped": 1,
+    "correct_mappings": 6,
+    "incorrect_mappings": 2,
+    "missing_mappings": 1,
+    "false_positives": 0,
+    "strategy_performance": {
+      "Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy]": {
+        "correct": 1,
+        "incorrect": 0,
+        "total": 1
+      },
+      "Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy]": {
+        "correct": 1,
+        "incorrect": 0,
+        "total": 1
+      },
+      "Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 1,
+        "incorrect": 0,
+        "total": 1
+      },
+      "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]": {
+        "correct": 1,
+        "incorrect": 1,
+        "total": 2
+      },
+      "Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 1,
+        "incorrect": 0,
+        "total": 1
+      },
+      "Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 1,
+        "incorrect": 0,
+        "total": 1
+      },
+      "ExactNameMatchStrategy": {
+        "correct": 0,
+        "incorrect": 1,
+        "total": 1
+      }
+    },
+    "column_results": [
+      {
+        "column": "Customer Name",
+        "expected": [
+          "res.partner",
+          "name"
+        ],
+        "predicted": [
+          "res.partner",
+          "name"
+        ],
+        "confidence": 1.0,
+        "status": "CORRECT",
+        "strategies_used": [
+          "Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "res.partner",
+            "company_name",
+            0.6266666666666667
+          ],
+          [
+            "res.partner",
+            "complete_name",
+            0.6266666666666667
+          ],
+          [
+            "res.partner",
+            "display_name",
+            0.6266666666666667
+          ],
+          [
+            "res.partner",
+            "parent_name",
+            0.6266666666666667
+          ]
+        ]
+      },
+      {
+        "column": "Contact Email",
+        "expected": [
+          "res.partner",
+          "email"
+        ],
+        "predicted": [
+          "res.partner",
+          "email"
+        ],
+        "confidence": 1.0,
+        "status": "CORRECT",
+        "strategies_used": [
+          "Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "res.partner",
+            "contact_address",
+            0.6866666666666666
+          ],
+          [
+            "res.partner",
+            "email_formatted",
+            0.6866666666666666
+          ],
+          [
+            "res.partner",
+            "email_normalized",
+            0.6866666666666666
+          ]
+        ]
+      },
+      {
+        "column": "Phone",
+        "expected": [
+          "res.partner",
+          "phone"
+        ],
+        "predicted": [
+          "res.partner",
+          "phone"
+        ],
+        "confidence": 1.0,
+        "status": "CORRECT",
+        "strategies_used": [
+          "Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": []
+      },
+      {
+        "column": "Street Address",
+        "expected": [
+          "res.partner",
+          "street"
+        ],
+        "predicted": [
+          "res.partner",
+          "street"
+        ],
+        "confidence": 0.6334615384615384,
+        "status": "CORRECT",
+        "strategies_used": [
+          "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+        ],
+        "alternatives": []
+      },
+      {
+        "column": "City",
+        "expected": [
+          "res.partner",
+          "city"
+        ],
+        "predicted": [
+          "res.partner",
+          "city"
+        ],
+        "confidence": 1.0,
+        "status": "CORRECT",
+        "strategies_used": [
+          "Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": []
+      },
+      {
+        "column": "State",
+        "expected": [
+          "res.partner",
+          "state_id"
+        ],
+        "predicted": [
+          "res.partner",
+          "state_id"
+        ],
+        "confidence": 1.0,
+        "status": "CORRECT",
+        "strategies_used": [
+          "Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": []
+      },
+      {
+        "column": "Zip Code",
+        "expected": [
+          "res.partner",
+          "zip"
+        ],
+        "predicted": [
+          "product.product",
+          "code"
+        ],
+        "confidence": 0.7735714285714286,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+        ],
+        "alternatives": []
+      },
+      {
+        "column": "Annual Revenue",
+        "expected": [
+          "res.partner",
+          "x_annual_revenue"
+        ],
+        "predicted": null,
+        "confidence": 0.0,
+        "status": "MISSING",
+        "strategies_used": [],
+        "alternatives": []
+      },
+      {
+        "column": "Customer ID",
+        "expected": [
+          "res.partner",
+          "ref"
+        ],
+        "predicted": [
+          "res.partner",
+          "id"
+        ],
+        "confidence": 1.0,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "ExactNameMatchStrategy"
+        ],
+        "alternatives": [
+          [
+            "res.partner",
+            "buyer_id",
+            0.6266666666666667
+          ],
+          [
+            "res.partner",
+            "company_id",
+            0.6266666666666667
+          ],
+          [
+            "res.partner",
+            "country_id",
+            0.6266666666666667
+          ],
+          [
+            "res.partner",
+            "currency_id",
+            0.6266666666666667
+          ]
+        ]
+      }
+    ],
+    "confidence_distribution": {
+      "high": 6,
+      "medium": 2,
+      "low": 0,
+      "none": 1
+    },
+    "accuracy": 0.6666666666666666,
+    "recall": 0.6666666666666666,
+    "precision": 0.75
+  },
+  {
+    "test_name": "products",
+    "status": "COMPLETED",
+    "timestamp": "2025-10-11T15:07:44.676369",
+    "total_columns": 7,
+    "columns_mapped": 4,
+    "columns_unmapped": 3,
+    "correct_mappings": 1,
+    "incorrect_mappings": 3,
+    "missing_mappings": 3,
+    "false_positives": 0,
+    "strategy_performance": {
+      "Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy]": {
+        "correct": 1,
+        "incorrect": 0,
+        "total": 1
+      },
+      "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 0,
+        "incorrect": 1,
+        "total": 1
+      },
+      "Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 0,
+        "incorrect": 1,
+        "total": 1
+      },
+      "Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 0,
+        "incorrect": 1,
+        "total": 1
+      }
+    },
+    "column_results": [
+      {
+        "column": "Product Name",
+        "expected": [
+          "product.product",
+          "name"
+        ],
+        "predicted": [
+          "product.product",
+          "name"
+        ],
+        "confidence": 1.0,
+        "status": "CORRECT",
+        "strategies_used": [
+          "Combined[ExactNameMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "product.product",
+            "display_name",
+            0.6266666666666667
+          ],
+          [
+            "product.product",
+            "product_tooltip",
+            0.6266666666666667
+          ],
+          [
+            "product.product",
+            "uom_name",
+            0.6266666666666667
+          ]
+        ]
+      },
+      {
+        "column": "SKU",
+        "expected": [
+          "product.product",
+          "default_code"
+        ],
+        "predicted": null,
+        "confidence": 0.0,
+        "status": "MISSING",
+        "strategies_used": [],
+        "alternatives": []
+      },
+      {
+        "column": "Sale Price",
+        "expected": [
+          "product.product",
+          "list_price"
+        ],
+        "predicted": null,
+        "confidence": 0.0,
+        "status": "MISSING",
+        "strategies_used": [],
+        "alternatives": []
+      },
+      {
+        "column": "Cost Price",
+        "expected": [
+          "product.product",
+          "standard_price"
+        ],
+        "predicted": null,
+        "confidence": 0.0,
+        "status": "MISSING",
+        "strategies_used": [],
+        "alternatives": []
+      },
+      {
+        "column": "Category",
+        "expected": [
+          "product.product",
+          "categ_id"
+        ],
+        "predicted": [
+          "res.partner",
+          "category_id"
+        ],
+        "confidence": 1.0,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "product.product",
+            "uom_category_id",
+            0.8746153846153846
+          ]
+        ]
+      },
+      {
+        "column": "Barcode",
+        "expected": [
+          "product.product",
+          "barcode"
+        ],
+        "predicted": [
+          "res.partner",
+          "barcode"
+        ],
+        "confidence": 1.0,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "product.product",
+            "barcode",
+            1.0
+          ],
+          [
+            "product.product",
+            "code",
+            0.8185714285714284
+          ]
+        ]
+      },
+      {
+        "column": "Active",
+        "expected": [
+          "product.product",
+          "active"
+        ],
+        "predicted": [
+          "res.partner",
+          "active"
+        ],
+        "confidence": 1.0,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "Combined[ExactNameMatchStrategy, LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "product.product",
+            "active",
+            1.0
+          ]
+        ]
+      }
+    ],
+    "confidence_distribution": {
+      "high": 4,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "accuracy": 0.14285714285714285,
+    "recall": 0.14285714285714285,
+    "precision": 0.25
+  },
+  {
+    "test_name": "sales_orders",
+    "status": "COMPLETED",
+    "timestamp": "2025-10-11T15:07:44.941481",
+    "total_columns": 6,
+    "columns_mapped": 5,
+    "columns_unmapped": 1,
+    "correct_mappings": 1,
+    "incorrect_mappings": 4,
+    "missing_mappings": 1,
+    "false_positives": 0,
+    "strategy_performance": {
+      "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]": {
+        "correct": 0,
+        "incorrect": 1,
+        "total": 1
+      },
+      "Combined[ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 0,
+        "incorrect": 1,
+        "total": 1
+      },
+      "Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 1,
+        "incorrect": 0,
+        "total": 1
+      },
+      "Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 0,
+        "incorrect": 1,
+        "total": 1
+      },
+      "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]": {
+        "correct": 0,
+        "incorrect": 1,
+        "total": 1
+      }
+    },
+    "column_results": [
+      {
+        "column": "Order Number",
+        "expected": [
+          "sale.order",
+          "name"
+        ],
+        "predicted": [
+          "sale.order",
+          "order_line"
+        ],
+        "confidence": 0.6266666666666667,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy]"
+        ],
+        "alternatives": []
+      },
+      {
+        "column": "Customer",
+        "expected": [
+          "sale.order",
+          "partner_id"
+        ],
+        "predicted": [
+          "res.partner",
+          "customer_rank"
+        ],
+        "confidence": 0.895,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "Combined[ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": []
+      },
+      {
+        "column": "Order Date",
+        "expected": [
+          "sale.order",
+          "date_order"
+        ],
+        "predicted": [
+          "sale.order",
+          "date_order"
+        ],
+        "confidence": 1.0,
+        "status": "CORRECT",
+        "strategies_used": [
+          "Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, PatternMatchStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "sale.order",
+            "validity_date",
+            0.69
+          ],
+          [
+            "sale.order",
+            "commitment_date",
+            0.6866666666666666
+          ],
+          [
+            "sale.order",
+            "create_date",
+            0.6866666666666666
+          ],
+          [
+            "sale.order",
+            "expected_date",
+            0.6866666666666666
+          ]
+        ]
+      },
+      {
+        "column": "Total",
+        "expected": [
+          "sale.order",
+          "amount_total"
+        ],
+        "predicted": [
+          "purchase.order",
+          "amount_total"
+        ],
+        "confidence": 0.7145454545454545,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "Combined[LabelMatchStrategy, DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "sale.order",
+            "amount_total",
+            0.7145454545454545
+          ],
+          [
+            "sale.order",
+            "tax_totals",
+            0.7083333333333333
+          ],
+          [
+            "purchase.order",
+            "tax_totals",
+            0.7083333333333333
+          ]
+        ]
+      },
+      {
+        "column": "Status",
+        "expected": [
+          "sale.order",
+          "state"
+        ],
+        "predicted": [
+          "res.partner",
+          "im_status"
+        ],
+        "confidence": 1.0,
+        "status": "INCORRECT",
+        "strategies_used": [
+          "Combined[DataTypeCompatibilityStrategy, ContextualMatchStrategy, FuzzyMatchStrategy]"
+        ],
+        "alternatives": [
+          [
+            "purchase.order",
+            "invoice_status",
+            0.6334615384615384
+          ],
+          [
+            "sale.order",
+            "invoice_status",
+            0.6334615384615384
+          ]
+        ]
+      },
+      {
+        "column": "Salesperson",
+        "expected": [
+          "sale.order",
+          "user_id"
+        ],
+        "predicted": null,
+        "confidence": 0.0,
+        "status": "MISSING",
+        "strategies_used": [],
+        "alternatives": []
+      }
+    ],
+    "confidence_distribution": {
+      "high": 3,
+      "medium": 2,
+      "low": 0,
+      "none": 1
+    },
+    "accuracy": 0.16666666666666666,
+    "recall": 0.16666666666666666,
+    "precision": 0.2
+  }
+]

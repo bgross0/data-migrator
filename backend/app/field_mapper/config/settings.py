@@ -32,15 +32,16 @@ class FieldMapperSettings(BaseSettings):
     max_suggestions: int = 5
     sample_size: int = 1000  # Max rows to sample for profiling
 
-    # Strategy weights
-    exact_match_weight: float = 1.0
-    label_match_weight: float = 0.95
-    selection_value_weight: float = 0.9
-    data_type_weight: float = 0.7
-    pattern_match_weight: float = 0.75
-    statistical_weight: float = 0.6
-    contextual_weight: float = 0.8
-    fuzzy_match_weight: float = 0.65
+    # Strategy weights (tuned based on validation results 2025-10-11)
+    # Individual strategy accuracy: Contextual(66%), DataType(55%), Exact(44%), Label(33%), Fuzzy(33%), Pattern(22%), Selection(0%), Statistical(0%)
+    exact_match_weight: float = 0.8      # 44% accuracy, 80% precision - Keep moderate
+    label_match_weight: float = 0.3      # 33% accuracy, 100% precision - Low weight but keep for high precision
+    selection_value_weight: float = 0.0  # 0% accuracy - DISABLED
+    data_type_weight: float = 0.3        # 55% accuracy, 62% precision - Low weight, needs semantic fix
+    pattern_match_weight: float = 0.0    # 22% accuracy - DISABLED
+    statistical_weight: float = 0.0      # 0% accuracy - DISABLED
+    contextual_weight: float = 1.0       # 66% accuracy, 75% precision - BEST PERFORMER
+    fuzzy_match_weight: float = 0.0      # 33% accuracy - DISABLED
 
     # Database
     history_db_path: str = os.getenv(

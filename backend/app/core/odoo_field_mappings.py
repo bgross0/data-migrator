@@ -48,6 +48,9 @@ ODOO_FIELD_MAPPINGS = {
         "lang": ["language", "lang", "locale", "preferred language"],
         "tz": ["timezone", "time zone", "tz"],
         "industry_id": ["segment", "market segment", "customer segment", "industry", "business segment", "market", "sector"],
+
+        # Custom Fields (commonly used)
+        "x_annual_revenue": ["annual revenue", "yearly revenue", "annual sales", "revenue", "yearly sales"],
     },
 
     # ===================== PRODUCTS (product.product / product.template) =====================
@@ -123,6 +126,9 @@ ODOO_FIELD_MAPPINGS = {
     },
 
     "sale.order.line": {
+        # Order Reference
+        "order_id": ["order", "order number", "so number", "sale order", "order reference", "order no"],
+
         # Product Information
         "product_id": ["product", "item", "sku", "article", "product name"],
         "name": ["description", "line description", "item description"],
@@ -261,7 +267,7 @@ ODOO_FIELD_MAPPINGS = {
         "partner_id": ["partner", "customer", "vendor", "supplier", "country"],
 
         # Financial Data - Revenue & Profit Analysis
-        "amount": ["amount", "value", "total", "sales", "revenue", "gross sales", "net sales", "profit", "margin", "net profit", "gross profit", "earnings", "net revenue", "sales after discount"],
+        "amount": ["amount", "value", "total", "sales", "revenue", "gross sales", "net sales", "earnings", "net revenue", "sales after discount"],
         "unit_amount": ["quantity", "qty", "units", "units sold", "volume", "quantity sold", "sales quantity", "volume sold"],
 
         # Product Information
@@ -276,8 +282,45 @@ ODOO_FIELD_MAPPINGS = {
         "currency_id": ["currency", "curr"],
         "user_id": ["user", "employee", "responsible"],
 
+        # Custom Fields for Financial Reporting (commonly used)
+        "x_cogs": ["cogs", "cost of goods sold", "cost of sales", "product cost", "manufacturing cost", "production cost"],
+        "x_profit": ["profit", "net profit", "gross profit", "margin", "earnings"],
+
         # Note: For detailed financial reporting (COGS, discounts, prices), map to product.product or sale.order.line
         # Note: For time-based analysis (month, year), use 'date' field and transform in reporting layer
+    },
+
+    # ===================== FLEET MANAGEMENT (fleet.vehicle) =====================
+    "fleet.vehicle": {
+        # Vehicle Identification
+        "vin": ["vin", "vehicle identification number", "chassis number", "serial number"],
+        "license_plate": ["license", "license plate", "plate", "registration", "registration number", "license number", "plate number", "reg", "tag"],
+        "model_id": ["model", "vehicle model", "car model", "make model", "vehicle type", "model name"],
+
+        # Assignment
+        "driver_id": ["driver", "assigned driver", "assigned to", "operator", "driver name"],
+
+        # Dates & Tracking
+        "acquisition_date": ["acquisition date", "purchase date", "bought", "bought date", "acquired", "date purchased", "purchase"],
+        "odometer": ["odometer", "mileage", "miles", "km", "kilometers", "distance", "meter reading"],
+        "odometer_unit": ["odometer unit", "mileage unit", "distance unit"],
+
+        # Status & Info
+        "active": ["active", "in service", "status", "enabled", "operational"],
+        "state": ["state", "vehicle state", "condition"],
+
+        # Financial
+        "model_year": ["year", "model year", "year of manufacture", "manufacturing year"],
+        "value": ["value", "vehicle value", "book value", "worth"],
+
+        # Other
+        "color": ["color", "colour", "vehicle color"],
+        "doors": ["doors", "number of doors", "door count"],
+        "seats": ["seats", "seating", "passengers", "capacity"],
+        "fuel_type": ["fuel", "fuel type", "gas type", "power type"],
+        "transmission": ["transmission", "gearbox", "gear type"],
+        "location": ["location", "parking", "garage", "depot"],
+        "notes": ["notes", "comments", "remarks", "description"],
     },
 }
 

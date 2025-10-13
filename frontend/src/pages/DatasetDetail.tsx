@@ -1,6 +1,8 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { datasetsApi } from '@/services/api'
+import { datasetsApi, modulesApi, sheetsApi } from '@/services/api'
+import ModuleSelector from '@/components/ModuleSelector'
+import SheetSplitter from '@/components/SheetSplitter'
 
 interface Sheet {
   id: number
@@ -24,6 +26,11 @@ export default function DatasetDetail() {
   const [exportError, setExportError] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [selectedModules, setSelectedModules] = useState<string[]>([])
+  const [suggestedModules, setSuggestedModules] = useState<string[]>([])
+  const [showModuleSelector, setShowModuleSelector] = useState(false)
+  const [showSheetSplitter, setShowSheetSplitter] = useState(false)
+  const [datasetWithModules, setDatasetWithModules] = useState<any>(null)
 
   useEffect(() => {
     loadDataset()
@@ -34,11 +41,41 @@ export default function DatasetDetail() {
       const response = await fetch(`/api/v1/datasets/${id}`)
       const data = await response.json()
       setDataset(data)
+      setDatasetWithModules(data)
+
+      // Load module information
+      try {
+        const modulesResponse = await modulesApi.getDatasetModules(Number(id))
+        setSelectedModules(modulesResponse.selected_modules || [])
+        
+        // Get suggested modules
+        const suggestionsResponse = await modulesApi.suggestModules(Number(id))
+        setSuggestedModules(suggestionsResponse.suggested_modules || [])
+      } catch (moduleError) {
+        console.error('Failed to load modules:', moduleError)
+      }
     } catch (error) {
       console.error('Failed to load dataset:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const updateDatasetModules = async (modules: string[]) => {
+    try {
+      await modulesApi.setDatasetModules(Number(id), modules)
+      setSelectedModules(modules)
+      setDatasetWithModules(prev => prev ? { ...prev, selected_modules: modules } : null)
+    } catch (error) {
+      console.error('Failed to update modules:', error)
+      alert('Failed to update modules')
+    }
+  }
+
+  const handleSplitComplete = (result: any) => {
+    setShowSheetSplitter(false)
+    // Reload dataset to show new sheets
+    loadDataset()
   }
 
   const handleExportToOdooMigrate = async () => {
@@ -120,12 +157,24 @@ export default function DatasetDetail() {
         {dataset.sheets && dataset.sheets.length > 0 ? (
           <div className="space-y-3">
             {dataset.sheets.map((sheet) => (
-              <div key={sheet.id} className="border border-gray-200 rounded p-4">
-                <h3 className="font-semibold text-lg">{sheet.name}</h3>
-                <div className="flex gap-6 mt-2 text-sm text-gray-600">
-                  <span>{sheet.n_rows.toLocaleString()} rows</span>
-                  <span>{sheet.n_cols} columns</span>
+              <div key={sheet.id} className="border border-gray-200 rounded p-4 flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold text-lg">{sheet.name}</h3>
+                  <div className="flex gap-6 mt-2 text-sm text-gray-600">
+                    <span>{sheet.n_rows.toLocaleString()} rows</span>
+                    <span>{sheet.n_cols} columns</span>
+                  </div>
                 </div>
+                <a
+                  href={`/api/v1/sheets/${sheet.id}/download`}
+                  download
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download CSV
+                </a>
               </div>
             ))}
           </div>
@@ -141,19 +190,56 @@ export default function DatasetDetail() {
         </div>
       )}
 
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap">
         <Link
           to={`/datasets/${id}/mappings`}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           Configure Mappings
         </Link>
+        
+        {/* Module Selection Toggle */}
+        {datasetWithModules && (
+          <button
+            onClick={() => setShowModuleSelector(!showModuleSelector)}
+            className={`px-4 py-2 rounded ${
+              selectedModules.length > 0 
+                ? 'bg-green-600 text-white hover:bg-green-700' 
+                : 'bg-gray-600 text-white hover:bg-gray-700'
+            }`}
+          >
+            {selectedModules.length > 0 
+              ? `${selectedModules.length} Modules Selected` 
+              : 'Select Modules'
+            }
+          </button>
+        )}
+
+        {/* Sheet Splitting Toggle */}
+        {dataset?.sheets && dataset.sheets.length > 0 && (
+          <button
+            onClick={() => setShowSheetSplitter(!showSheetSplitter)}
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+          >
+            Split Sheets
+          </button>
+        )}
         <Link
           to={`/datasets/${id}/import`}
           className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
         >
           Import to Odoo
         </Link>
+        <a
+          href={`/api/v1/datasets/${id}/download-cleaned`}
+          download
+          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Download Cleaned Data
+        </a>
         <button
           onClick={handleExportToOdooMigrate}
           disabled={isExporting}
@@ -199,6 +285,28 @@ export default function DatasetDetail() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Module Selection Section */}
+      {showModuleSelector && datasetWithModules && (
+        <div className="mt-8">
+          <ModuleSelector
+            selectedModules={selectedModules}
+            onModulesChange={updateDatasetModules}
+            suggestedModules={suggestedModules}
+          />
+        </div>
+      )}
+
+      {/* Sheet Splitter Section */}
+      {showSheetSplitter && dataset?.sheets && dataset.sheets.length > 0 && (
+        <div className="mt-8">
+          <SheetSplitter
+            datasetId={Number(id)}
+            sheetId={dataset.sheets[0].id}
+            onSplitComplete={handleSplitComplete}
+          />
         </div>
       )}
     </div>

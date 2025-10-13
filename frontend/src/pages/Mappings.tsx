@@ -1,10 +1,11 @@
 import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { datasetsApi } from '@/services/api'
+import { datasetsApi, mappingsApi } from '@/services/api'
 import { Mapping, Dataset, CustomFieldDefinition } from '@/types/mapping'
 import CustomFieldModal from '@/components/CustomFieldModal'
 import TransformModal from '@/components/TransformModal'
 import OdooConnectionModal from '@/components/OdooConnectionModal'
+import LambdaMappingModal, { LambdaMappingData } from '@/components/LambdaMappingModal'
 
 export default function Mappings() {
   const { id } = useParams()
@@ -22,6 +23,8 @@ export default function Mappings() {
   const [odooConnectionModal, setOdooConnectionModal] = useState(false)
   const [creatingFields, setCreatingFields] = useState(false)
   const [fieldCreationResult, setFieldCreationResult] = useState<any>(null)
+  const [lambdaModal, setLambdaModal] = useState<{ isOpen: boolean; mapping?: Mapping }>({ isOpen: false })
+  const [availableColumns, setAvailableColumns] = useState<string[]>([])
 
   useEffect(() => {
     loadData()
@@ -33,6 +36,15 @@ export default function Mappings() {
       const datasetData = await datasetsApi.get(Number(id))
       setDataset(datasetData)
 
+      // Get available columns from dataset sheets
+      const columns = new Set<string>()
+      datasetData.sheets?.forEach((sheet: any) => {
+        sheet.column_profiles?.forEach((profile: any) => {
+          columns.add(profile.column_name)
+        })
+      })
+      setAvailableColumns(Array.from(columns))
+
       // Try to load existing mappings
       const response = await fetch(`/api/v1/datasets/${id}/mappings`)
       const data = await response.json()
@@ -41,6 +53,37 @@ export default function Mappings() {
       console.error('Failed to load data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const createLambdaMapping = async (lambdaData: LambdaMappingData) => {
+    try {
+      if (!dataset) return
+      
+      // Get the first sheet ID for now
+      const sheetId = dataset.sheets?.[0]?.id
+      if (!sheetId) {
+        alert('No sheet found for lambda mapping')
+        return
+      }
+
+      const newMapping = await mappingsApi.createLambda(Number(id), sheetId, lambdaData)
+      setMappings(prev => [...prev, newMapping])
+    } catch (error) {
+      console.error('Failed to create lambda mapping:', error)
+      alert('Failed to create lambda mapping')
+    }
+  }
+
+  const editLambdaMapping = async (mappingId: number, lambdaData: LambdaMappingData) => {
+    try {
+      await mappingsApi.update(mappingId, lambdaData)
+      setMappings(prev => 
+        prev.map(m => m.id === mappingId ? { ...m, ...lambdaData } : m)
+      )
+    } catch (error) {
+      console.error('Failed to update lambda mapping:', error)
+      alert('Failed to update lambda mapping')
     }
   }
 
@@ -347,6 +390,12 @@ export default function Mappings() {
                   Reset All
                 </button>
                 <button
+                  onClick={() => setLambdaModal({ isOpen: true })}
+                  className="bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700"
+                >
+                  Add Lambda
+                </button>
+                <button
                   onClick={exportMappings}
                   className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                 >
@@ -425,6 +474,12 @@ export default function Mappings() {
                           className="bg-purple-600 text-white px-4 py-1 rounded text-sm hover:bg-purple-700"
                         >
                           Custom Field
+                        </button>
+                        <button
+                          onClick={() => setLambdaModal({ isOpen: true, mapping })}
+                          className="bg-orange-600 text-white px-4 py-1 rounded text-sm hover:bg-orange-700"
+                        >
+                          Lambda
                         </button>
                         <button
                           onClick={() => ignoreMapping(mapping.id)}
@@ -664,6 +719,29 @@ export default function Mappings() {
           setOdooConnectionModal(false)
           loadOdooConnections()
         }}
+      />
+
+      {/* Lambda Mapping Modal */}
+      <LambdaMappingModal
+        isOpen={lambdaModal.isOpen}
+        onClose={() => setLambdaModal({ isOpen: false })}
+        onSave={(lambdaData) => {
+          if (lambdaModal.mapping) {
+            editLambdaMapping(lambdaModal.mapping.id, lambdaData)
+          } else {
+            createLambdaMapping(lambdaData)
+          }
+          setLambdaModal({ isOpen: false })
+        }}
+        initialData={lambdaModal.mapping ? {
+          header_name: lambdaModal.mapping.header_name,
+          target_field: lambdaModal.mapping.target_field,
+          target_model: lambdaModal.mapping.target_model,
+          lambda_function: lambdaModal.mapping.lambda_function || '',
+          mapping_type: 'lambda',
+          description: lambdaModal.mapping.rationale || ''
+        } : undefined}
+        availableColumns={availableColumns}
       />
     </div>
   )

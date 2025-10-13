@@ -1,5 +1,5 @@
 """
-Base classes and interfaces for data cleaning.
+Base classes and interfaces for data cleaning using Polars.
 
 This module provides the abstract base class for all cleaning rules,
 as well as data structures for tracking cleaning results and changes.
@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from enum import Enum
-import pandas as pd
+import polars as pl
 
 
 class ChangeType(Enum):
@@ -42,9 +42,9 @@ class CleaningResult:
     """
     Result of a cleaning rule execution.
 
-    Contains the cleaned DataFrame plus metadata about what changed.
+    Contains the cleaned Polars DataFrame plus metadata about what changed.
     """
-    df: pd.DataFrame
+    df: pl.DataFrame
     changes: List[Change] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     stats: Dict[str, Any] = field(default_factory=dict)
@@ -75,16 +75,16 @@ class CleaningRule(ABC):
     Abstract base class for all cleaning rules.
 
     Each rule performs a specific data cleaning operation and returns
-    a CleaningResult with the modified DataFrame and change log.
+    a CleaningResult with the modified Polars DataFrame and change log.
     """
 
     @abstractmethod
-    def clean(self, df: pd.DataFrame) -> CleaningResult:
+    def clean(self, df: pl.DataFrame) -> CleaningResult:
         """
-        Clean the dataframe according to this rule's logic.
+        Clean the Polars dataframe according to this rule's logic.
 
         Args:
-            df: Input DataFrame to clean
+            df: Input Polars DataFrame to clean
 
         Returns:
             CleaningResult with cleaned DataFrame and metadata
@@ -123,16 +123,16 @@ class CleaningRuleError(Exception):
 
 def safe_rule_execution(func):
     """
-    Decorator for safe rule execution.
+    Decorator for safe rule execution with Polars.
 
     Catches exceptions and converts them to warnings in the result.
     """
-    def wrapper(self, df: pd.DataFrame) -> CleaningResult:
+    def wrapper(self, df: pl.DataFrame) -> CleaningResult:
         try:
             return func(self, df)
         except Exception as e:
             # Return original df with error logged
-            result = CleaningResult(df=df.copy())
+            result = CleaningResult(df=df.clone())
             result.add_warning(f"Rule '{self.name}' failed: {str(e)}")
             result.stats["error"] = str(e)
             return result

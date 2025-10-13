@@ -8,22 +8,33 @@ from app.services.mapping_service import MappingService
 from app.schemas.dataset import DatasetCreate, DatasetResponse, DatasetListResponse
 from app.field_mapper.core.module_registry import get_module_registry
 from pathlib import Path
-import pandas as pd
+import polars as pl
 import json
 
 router = APIRouter()
 
 
-@router.post("/datasets/upload", response_model=DatasetResponse)
+@router.post("/datasets/upload")
 async def upload_dataset(
     file: UploadFile = File(...),
     name: str = None,
     db: Session = Depends(get_db),
 ):
-    """Upload a spreadsheet file and create a dataset."""
+    """
+    Upload a spreadsheet file and create a dataset.
+
+    Returns the dataset and an operation_id for tracking progress.
+    Poll /api/v1/operations/{operation_id}/status to get real-time progress.
+    """
     service = DatasetService(db)
-    dataset = await service.create_from_upload(file, name)
-    return dataset
+    dataset, operation_id = await service.create_from_upload(file, name)
+
+    return {
+        "id": dataset.id,
+        "name": dataset.name,
+        "operation_id": operation_id,
+        "profiling_status": dataset.profiling_status
+    }
 
 
 @router.get("/datasets", response_model=DatasetListResponse)
@@ -214,20 +225,20 @@ async def get_cleaned_data_preview(
 
     try:
         if file_path.suffix.lower() in ['.csv', '.cleaned.csv']:
-            df = pd.read_csv(file_path, nrows=limit)
+            df = pl.read_csv(file_path, n_rows=limit)
             preview_data['Sheet1'] = {
-                "columns": df.columns.tolist(),
-                "data": df.to_dict('records'),
-                "total_rows": len(df)
+                "columns": df.columns,
+                "data": df.to_dicts(),
+                "total_rows": df.height
             }
         else:
-            excel_file = pd.ExcelFile(file_path)
-            for sheet_name in excel_file.sheet_names:
-                df = pd.read_excel(excel_file, sheet_name=sheet_name, nrows=limit)
+            sheets_dict = pl.read_excel(file_path, sheet_id=None)
+            for sheet_name, df in sheets_dict.items():
+                df_limited = df.head(limit)
                 preview_data[sheet_name] = {
-                    "columns": df.columns.tolist(),
-                    "data": df.to_dict('records'),
-                    "total_rows": len(df)
+                    "columns": df_limited.columns,
+                    "data": df_limited.to_dicts(),
+                    "total_rows": df_limited.height
                 }
 
         return {
@@ -340,20 +351,19 @@ async def export_for_odoo(dataset_id: int, db: Session = Depends(get_db)):
     # Read cleaned data per sheet
     try:
         if file_path.suffix.lower() in ['.csv', '.cleaned.csv']:
-            df = pd.read_csv(file_path)
+            df = pl.read_csv(file_path)
             export_data["sheets"]["Sheet1"] = {
-                "columns": df.columns.tolist(),
-                "row_count": len(df),
-                "data": df.to_dict('records')
+                "columns": df.columns,
+                "row_count": df.height,
+                "data": df.to_dicts()
             }
         else:
-            excel_file = pd.ExcelFile(file_path)
-            for sheet_name in excel_file.sheet_names:
-                df = pd.read_excel(excel_file, sheet_name=sheet_name)
+            sheets_dict = pl.read_excel(file_path, sheet_id=None)
+            for sheet_name, df in sheets_dict.items():
                 export_data["sheets"][sheet_name] = {
-                    "columns": df.columns.tolist(),
-                    "row_count": len(df),
-                    "data": df.to_dict('records')
+                    "columns": df.columns,
+                    "row_count": df.height,
+                    "data": df.to_dicts()
                 }
 
         # Add import instructions

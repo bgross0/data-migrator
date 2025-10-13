@@ -1,11 +1,11 @@
 """
-Main data cleaning orchestrator.
+Main data cleaning orchestrator using Polars.
 
 Runs cleaning rules in priority order and generates a comprehensive report.
 """
 from pathlib import Path
 from typing import List, Tuple, Optional, Union
-import pandas as pd
+import polars as pl
 import logging
 
 from .base import CleaningRule, CleaningResult
@@ -54,27 +54,27 @@ class DataCleaner:
         for rule in rules:
             self.register_rule(rule)
 
-    def clean(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, CleaningReport]:
+    def clean(self, df: pl.DataFrame) -> Tuple[pl.DataFrame, CleaningReport]:
         """
-        Clean a DataFrame using registered rules.
+        Clean a Polars DataFrame using registered rules.
 
         Args:
-            df: Input DataFrame to clean
+            df: Input Polars DataFrame to clean
 
         Returns:
             Tuple of (cleaned DataFrame, cleaning report)
         """
         # Initialize report
         report = CleaningReport(
-            original_shape=df.shape,
+            original_shape=(df.height, df.width),
             config_used=self.config.to_dict()
         )
 
         # Store original column names for mapping
-        original_columns = df.columns.tolist()
+        original_columns = df.columns
 
-        # Make a copy to avoid modifying original
-        df_cleaned = df.copy()
+        # Clone to avoid modifying original
+        df_cleaned = df.clone()
 
         logger.info(f"Starting data cleaning with {len(self.rules)} rules")
 
@@ -111,7 +111,7 @@ class DataCleaner:
 
         # Build column name mapping
         # (This is approximate since columns may have been added/removed)
-        final_columns = df_cleaned.columns.tolist()
+        final_columns = df_cleaned.columns
 
         # Try to match original to final columns
         for orig_col in original_columns:
@@ -144,7 +144,7 @@ class DataCleaner:
                     report.column_mappings[final_col] = final_col
 
         # Update final shape
-        report.cleaned_shape = df_cleaned.shape
+        report.cleaned_shape = (df_cleaned.height, df_cleaned.width)
 
         logger.info(f"Cleaning completed: {report.original_shape} → {report.cleaned_shape}")
 
@@ -154,9 +154,9 @@ class DataCleaner:
         self,
         file_path: Union[str, Path],
         sheet_name: Optional[Union[str, int]] = 0
-    ) -> Tuple[pd.DataFrame, CleaningReport]:
+    ) -> Tuple[pl.DataFrame, CleaningReport]:
         """
-        Clean a file (Excel or CSV).
+        Clean a file (Excel or CSV) using Polars.
 
         Args:
             file_path: Path to the file
@@ -175,21 +175,21 @@ class DataCleaner:
         # Load the file
         if file_path.suffix.lower() in ['.xlsx', '.xls']:
             # Excel file - don't use header parameter yet (HeaderDetectionRule will handle it)
-            df = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
+            df = pl.read_excel(file_path, sheet_id=sheet_name, has_header=False)
         elif file_path.suffix.lower() == '.csv':
-            df = pd.read_csv(file_path, header=None)
+            df = pl.read_csv(file_path, has_header=False)
         else:
             raise ValueError(f"Unsupported file format: {file_path.suffix}")
 
-        logger.info(f"Loaded {df.shape[0]} rows × {df.shape[1]} columns")
+        logger.info(f"Loaded {df.height} rows × {df.width} columns")
 
         # Clean the DataFrame
         return self.clean(df)
 
     def clean_with_default_rules(
         self,
-        df: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, CleaningReport]:
+        df: pl.DataFrame
+    ) -> Tuple[pl.DataFrame, CleaningReport]:
         """
         Clean a DataFrame using default rules based on config.
 

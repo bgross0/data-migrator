@@ -11,10 +11,11 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // Listen on all interfaces (accessible via Tailscale)
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8888',
         changeOrigin: true,
       },
     },

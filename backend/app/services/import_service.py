@@ -5,15 +5,17 @@ from app.models.run import RunStatus
 from app.connectors.odoo import OdooConnector
 from app.importers.executor import TwoPhaseImporter
 from app.importers.graph import ImportGraph as GraphBuilder
+from app.core.lambda_transformer import LambdaTransformer
 from pathlib import Path
 from typing import Dict, List, Any
-import pandas as pd
+import polars as pl
 from collections import defaultdict
 
 
 class ImportService:
     def __init__(self, db: Session):
         self.db = db
+        self.lambda_transformer = LambdaTransformer()
 
     async def create_run(self, dataset_id: int, run_data: RunCreate):
         """Create a new import run."""
@@ -97,9 +99,9 @@ class ImportService:
             self.db.commit()
             raise
 
-    def _load_cleaned_data(self, cleaned_file_path: str) -> Dict[str, pd.DataFrame]:
+    def _load_cleaned_data(self, cleaned_file_path: str) -> Dict[str, pl.DataFrame]:
         """
-        Load cleaned data from file.
+        Load cleaned data from file using Polars.
 
         Returns:
             Dict of {sheet_name: DataFrame}
@@ -107,16 +109,14 @@ class ImportService:
         file_path = Path(cleaned_file_path)
 
         if file_path.suffix.lower() in ['.csv', '.cleaned.csv']:
-            return {'Sheet1': pd.read_csv(file_path)}
+            return {'Sheet1': pl.read_csv(file_path)}
         else:
             # Read all sheets from Excel
-            excel_file = pd.ExcelFile(file_path)
-            return {sheet_name: pd.read_excel(excel_file, sheet_name=sheet_name)
-                    for sheet_name in excel_file.sheet_names}
+            return pl.read_excel(file_path, sheet_id=None)
 
-    def _apply_mappings(self, data: Dict[str, pd.DataFrame], mappings: List[Mapping]) -> Dict[str, List[Dict]]:
+    def _apply_mappings(self, data: Dict[str, pl.DataFrame], mappings: List[Mapping]) -> Dict[str, List[Dict]]:
         """
-        Apply mappings to transform dataframes to Odoo records grouped by model.
+        Apply mappings (including lambda transformations) to transform dataframes to Odoo records.
 
         Args:
             data: Dict of {sheet_name: DataFrame}
@@ -135,8 +135,7 @@ class ImportService:
 
         for sheet_id, sheet_mappings_list in sheet_mappings.items():
             # Get sheet name and DataFrame
-            # Find the sheet by ID
-            sheet = sheet_mappings_list[0].dataset.sheets  # Access via relationship
+            sheet = sheet_mappings_list[0].dataset.sheets
             sheet_obj = next((s for s in sheet if s.id == sheet_id), None)
             if not sheet_obj:
                 continue
@@ -148,24 +147,38 @@ class ImportService:
             df = data[sheet_name]
 
             # Group mappings by target model
-            model_field_map = defaultdict(dict)
+            model_mappings = defaultdict(list)
             for mapping in sheet_mappings_list:
-                if mapping.target_model and mapping.target_field:
-                    model_field_map[mapping.target_model][mapping.header_name] = mapping.target_field
+                if mapping.target_model:
+                    model_mappings[mapping.target_model].append(mapping)
 
-            # Transform each row
-            for _, row in df.iterrows():
-                for model, field_map in model_field_map.items():
-                    record = {}
-                    for source_col, target_field in field_map.items():
-                        if source_col in row:
-                            value = row[source_col]
-                            # Skip NaN values
-                            if pd.notna(value):
-                                record[target_field] = value
+            # Process each model's mappings
+            for model, model_mapping_list in model_mappings.items():
+                # Apply transformations based on mapping type
+                for mapping in model_mapping_list:
+                    if mapping.mapping_type == "lambda" and mapping.lambda_function:
+                        # Apply lambda transformation
+                        df = self.lambda_transformer.apply_lambda_mapping(
+                            df,
+                            mapping.target_field,
+                            mapping.lambda_function
+                        )
+                    elif mapping.mapping_type == "direct":
+                        # Simple column rename for direct mappings
+                        if mapping.header_name in df.columns and mapping.target_field:
+                            df = df.rename({mapping.header_name: mapping.target_field})
 
-                    if record:  # Only add non-empty records
-                        model_records[model].append(record)
+                # Convert Polars DataFrame to list of records
+                records = df.to_dicts()
+
+                # Filter out null values and add to model_records
+                for record in records:
+                    cleaned_record = {
+                        k: v for k, v in record.items()
+                        if v is not None and k in [m.target_field for m in model_mapping_list]
+                    }
+                    if cleaned_record:
+                        model_records[model].append(cleaned_record)
 
         return dict(model_records)
 

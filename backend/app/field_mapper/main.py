@@ -1,10 +1,11 @@
 """
 DeterministicFieldMapper - Main entry point for the field mapping system.
 
-This is the primary interface for using the deterministic field mapper.
+This is the primary interface for using the deterministic field mapper with Polars.
 """
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+import polars as pl
 import pandas as pd
 
 from .core.knowledge_base import OdooKnowledgeBase
@@ -106,7 +107,7 @@ class DeterministicFieldMapper:
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        # Determine file type
+        # Determine file type (Note: Polars is used internally for data processing)
         if file_path.suffix.lower() in ['.xlsx', '.xls']:
             return self._map_excel_file(file_path, sheet_name)
         elif file_path.suffix.lower() == '.csv':

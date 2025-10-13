@@ -63,6 +63,68 @@ export const mappingsApi = {
     const response = await api.delete(`/mappings/${mappingId}`)
     return response.data
   },
+
+  createLambda: async (datasetId: number, sheetId: number, lambdaData: any) => {
+    const response = await api.post(`/datasets/${datasetId}/lambda-mappings`, {
+      sheet_id: sheetId,
+      ...lambdaData
+    })
+    return response.data
+  },
+}
+
+// Modules API
+export const modulesApi = {
+  list: async () => {
+    const response = await api.get('/modules')
+    return response.data
+  },
+
+  setDatasetModules: async (datasetId: number, modules: string[]) => {
+    const response = await api.post(`/datasets/${datasetId}/modules`, modules)
+    return response.data
+  },
+
+  getDatasetModules: async (datasetId: number) => {
+    const response = await api.get(`/datasets/${datasetId}/modules`)
+    return response.data
+  },
+
+  suggestModules: async (datasetId: number) => {
+    const response = await api.post(`/datasets/${datasetId}/suggest-modules`)
+    return response.data
+  },
+}
+
+// Sheets API
+export const sheetsApi = {
+  getProfiles: async (sheetId: number) => {
+    const response = await api.get(`/sheets/${sheetId}/profiles`)
+    return response.data
+  },
+
+  download: async (sheetId: number) => {
+    const response = await api.get(`/sheets/${sheetId}/download`)
+    return response.data
+  },
+
+  previewSplit: async (sheetId: number) => {
+    const response = await api.get(`/sheets/${sheetId}/preview-split`)
+    return response.data
+  },
+
+  executeSplit: async (sheetId: number, data: { models: string[]; delete_original?: boolean }) => {
+    const response = await api.post(`/sheets/${sheetId}/split`, data)
+    return response.data
+  },
+}
+
+// Operations API
+export const operationsApi = {
+  getStatus: async (operationId: string) => {
+    const response = await api.get(`/operations/${operationId}/status`)
+    return response.data
+  },
 }
 
 // Runs API

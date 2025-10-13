@@ -1,12 +1,13 @@
 from sqlalchemy.orm import Session, joinedload
 from pathlib import Path
-from typing import Optional
-import pandas as pd
+from typing import Optional, Dict, Any
+import polars as pl
 from app.models import Mapping, Dataset, Sheet, ColumnProfile, Suggestion, SourceFile
 from app.schemas.mapping import MappingUpdate
 from app.core.matcher import HeaderMatcher
 from app.models.mapping import MappingStatus
 from app.core.config import settings
+from app.core.lambda_transformer import LambdaTransformer
 
 # Import deterministic field mapper
 try:
@@ -28,6 +29,7 @@ except ImportError:
 class MappingService:
     def __init__(self, db: Session):
         self.db = db
+        self.lambda_transformer = LambdaTransformer()
 
         # Initialize deterministic field mapper with odoo-dictionary
         self.deterministic_mapper = None
@@ -180,17 +182,22 @@ class MappingService:
                 is_csv = file_ext == '.csv' or '.csv' in file_path.name
 
                 if is_excel:
-                    df = pd.read_excel(file_path, sheet_name=sheet.name)
+                    df = pl.read_excel(file_path, sheet_name=sheet.name)
                 elif is_csv:
-                    df = pd.read_csv(file_path)
+                    df = pl.read_csv(file_path)
                 else:
                     continue
+
+                # Convert to pandas temporarily for deterministic field mapper
+                # TODO: Update deterministic field mapper to use Polars natively
+                import pandas as pd
+                pandas_df = df.to_pandas()
 
                 # Use deterministic field mapper
                 # map_dataframe returns Dict[str, List[FieldMapping]]
                 # Structure: {column_name: [FieldMapping, ...]}
                 sheet_mappings = self.deterministic_mapper.map_dataframe(
-                    df,
+                    pandas_df,
                     sheet_name=sheet.name,
                     selected_modules=selected_modules
                 )
@@ -337,6 +344,27 @@ class MappingService:
         print(f"✓ Generated {len(all_mappings)} mappings using HybridMatcher")
         return all_mappings
 
+    def create_lambda_mapping(self, dataset_id: int, sheet_id: int, target_field: str,
+                            lambda_function: str, target_model: str) -> Mapping:
+        """Create a lambda transformation mapping."""
+        mapping = Mapping(
+            dataset_id=dataset_id,
+            sheet_id=sheet_id,
+            header_name=f"lambda_{target_field}",  # Virtual column name
+            target_model=target_model,
+            target_field=target_field,
+            confidence=1.0,  # Lambda mappings are always high confidence
+            status=MappingStatus.CONFIRMED,
+            chosen=True,
+            mapping_type="lambda",
+            lambda_function=lambda_function,
+            rationale=f"Lambda transformation for {target_field}"
+        )
+        self.db.add(mapping)
+        self.db.commit()
+        self.db.refresh(mapping)
+        return mapping
+
     def update_mapping(self, mapping_id: int, mapping_data: MappingUpdate):
         """Update a mapping."""
         mapping = self.db.query(Mapping).filter(Mapping.id == mapping_id).first()
@@ -353,6 +381,14 @@ class MappingService:
             mapping.chosen = mapping_data.chosen
         if mapping_data.custom_field_definition is not None:
             mapping.custom_field_definition = mapping_data.custom_field_definition.model_dump()
+
+        # Support updating lambda mappings
+        if hasattr(mapping_data, 'mapping_type') and mapping_data.mapping_type:
+            mapping.mapping_type = mapping_data.mapping_type
+        if hasattr(mapping_data, 'lambda_function') and mapping_data.lambda_function:
+            mapping.lambda_function = mapping_data.lambda_function
+        if hasattr(mapping_data, 'join_config') and mapping_data.join_config:
+            mapping.join_config = mapping_data.join_config
 
         self.db.commit()
         self.db.refresh(mapping)

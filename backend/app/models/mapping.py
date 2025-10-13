@@ -35,6 +35,11 @@ class Mapping(Base):
     rationale = Column(String, nullable=True)  # Why this mapping was suggested
     custom_field_definition = Column(JSON, nullable=True)  # Custom field spec when status=CREATE_FIELD
 
+    # Lambda transformation support
+    mapping_type = Column(String, default="direct", nullable=False)  # direct, lambda, join
+    lambda_function = Column(String, nullable=True)  # Lambda function as string
+    join_config = Column(JSON, nullable=True)  # Join configuration
+
     # Relationships
     dataset = relationship("Dataset", back_populates="mappings")
     transforms = relationship("Transform", back_populates="mapping", cascade="all, delete-orphan")

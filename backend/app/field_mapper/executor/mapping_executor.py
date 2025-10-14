@@ -72,10 +72,6 @@ class MappingExecutor:
         result_data = {}
 
         for source_column, field_mappings in mappings.items():
-            if source_column not in df.columns:
-                logger.warning(f"Source column '{source_column}' not found in DataFrame")
-                continue
-
             if not field_mappings:
                 logger.warning(f"No mappings for column '{source_column}'")
                 continue
@@ -87,32 +83,64 @@ class MappingExecutor:
             if target_model and best_mapping.target_model != target_model:
                 continue
 
-            # Check if this is a lambda mapping
-            if hasattr(best_mapping, 'mapping_type') and best_mapping.mapping_type == 'lambda':
-                # Use lambda transformer
-                lambda_func = getattr(best_mapping, 'lambda_function', None)
-                if lambda_func:
-                    target_field = best_mapping.target_field or source_column
-                    df = self.lambda_transformer.apply_lambda_mapping(
-                        df,
-                        target_field,
-                        lambda_func,
-                        getattr(best_mapping, 'data_type', None)
+            mapping_type = getattr(best_mapping, "mapping_type", "direct")
+
+            if mapping_type == "lambda":
+                lambda_func = getattr(best_mapping, "lambda_function", None)
+                if not lambda_func:
+                    logger.warning(
+                        "Lambda mapping '%s' missing lambda_function",
+                        source_column,
                     )
-                    result_data[target_field] = df[target_field]
-            else:
-                # Regular column mapping
-                source_data = df[source_column]
+                    continue
 
-                # Apply transformations
-                transformed_data = self._apply_transformations(
-                    source_data,
-                    best_mapping
-                )
+                missing_dependencies = [
+                    dep
+                    for dep in getattr(best_mapping, "lambda_dependencies", [])
+                    if dep not in df.columns
+                ]
+                if missing_dependencies:
+                    logger.warning(
+                        "Skipping lambda mapping '%s' -> '%s': missing dependencies %s",
+                        source_column,
+                        best_mapping.target_field,
+                        ", ".join(missing_dependencies),
+                    )
+                    continue
 
-                # Use target field name as column name
                 target_field = best_mapping.target_field or source_column
-                result_data[target_field] = transformed_data
+                df = self.lambda_transformer.apply_lambda_mapping(
+                    df,
+                    target_field,
+                    lambda_func,
+                    getattr(best_mapping, "data_type", None),
+                )
+                result_data[target_field] = df[target_field]
+
+                logger.debug(
+                    "Lambda mapped '%s' -> '%s' (%s)",
+                    source_column,
+                    target_field,
+                    best_mapping.target_model,
+                )
+                continue
+
+            if source_column not in df.columns:
+                logger.warning(f"Source column '{source_column}' not found in DataFrame")
+                continue
+
+            # Regular column mapping
+            source_data = df[source_column]
+
+            # Apply transformations
+            transformed_data = self._apply_transformations(
+                source_data,
+                best_mapping
+            )
+
+            # Use target field name as column name
+            target_field = best_mapping.target_field or source_column
+            result_data[target_field] = transformed_data
 
             logger.debug(
                 f"Mapped '{source_column}' -> '{target_field}' "
@@ -482,11 +510,6 @@ class MappingExecutor:
         errors = []
 
         for source_column, field_mappings in mappings.items():
-            # Check column exists
-            if source_column not in df.columns:
-                errors.append(f"Column '{source_column}' not found in DataFrame")
-                continue
-
             # Check mappings exist
             if not field_mappings:
                 errors.append(f"No mappings for column '{source_column}'")
@@ -499,5 +522,30 @@ class MappingExecutor:
                     f"Low confidence mapping for '{source_column}': "
                     f"{best_mapping.confidence:.2f}"
                 )
+
+            mapping_type = getattr(best_mapping, "mapping_type", "direct")
+
+            if mapping_type == "lambda":
+                lambda_func = getattr(best_mapping, "lambda_function", None)
+                if not lambda_func:
+                    errors.append(
+                        f"Lambda mapping '{source_column}' has no lambda_function defined"
+                    )
+
+                missing_dependencies = [
+                    dep
+                    for dep in getattr(best_mapping, "lambda_dependencies", [])
+                    if dep not in df.columns
+                ]
+                if missing_dependencies:
+                    errors.append(
+                        f"Lambda mapping '{source_column}' missing required columns: "
+                        f"{', '.join(missing_dependencies)}"
+                    )
+                continue
+
+            # Check column exists for direct mappings
+            if source_column not in df.columns:
+                errors.append(f"Column '{source_column}' not found in DataFrame")
 
         return errors

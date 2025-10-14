@@ -40,6 +40,18 @@ export const datasetsApi = {
     const response = await api.delete(`/datasets/${id}`)
     return response.data
   },
+
+  getCleaningReport: async (id: number) => {
+    const response = await api.get(`/datasets/${id}/cleaning-report`)
+    return response.data
+  },
+
+  getCleanedDataPreview: async (id: number, limit = 100) => {
+    const response = await api.get(`/datasets/${id}/cleaned-data`, {
+      params: { limit },
+    })
+    return response.data
+  },
 }
 
 // Mappings API
@@ -69,6 +81,54 @@ export const mappingsApi = {
       sheet_id: sheetId,
       ...lambdaData
     })
+    return response.data
+  },
+}
+
+// Transforms API
+export const transformsApi = {
+  available: async () => {
+    const response = await api.get('/transforms/available')
+    return response.data
+  },
+
+  list: async (mappingId: number) => {
+    const response = await api.get(`/mappings/${mappingId}/transforms`)
+    return response.data
+  },
+
+  create: async (
+    mappingId: number,
+    data: { fn: string; params?: Record<string, unknown> | null }
+  ) => {
+    const response = await api.post(`/mappings/${mappingId}/transforms`, data)
+    return response.data
+  },
+
+  update: async (
+    transformId: number,
+    data: { fn?: string; order?: number; params?: Record<string, unknown> | null }
+  ) => {
+    const response = await api.put(`/transforms/${transformId}`, data)
+    return response.data
+  },
+
+  remove: async (transformId: number) => {
+    const response = await api.delete(`/transforms/${transformId}`)
+    return response.data
+  },
+
+  reorder: async (transformId: number, newOrder: number) => {
+    const response = await api.post(
+      `/transforms/${transformId}/reorder`,
+      null,
+      { params: { new_order: newOrder } }
+    )
+    return response.data
+  },
+
+  test: async (data: { fn: string; params?: Record<string, unknown> | null; sample_value: unknown }) => {
+    const response = await api.post('/transforms/test', data)
     return response.data
   },
 }

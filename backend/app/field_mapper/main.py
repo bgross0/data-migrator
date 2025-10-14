@@ -6,7 +6,6 @@ This is the primary interface for using the deterministic field mapper with Pola
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 import polars as pl
-import pandas as pd
 
 from .core.knowledge_base import OdooKnowledgeBase
 from .core.data_structures import ColumnProfile, FieldMapping, MappingResult, MappingStatus
@@ -132,13 +131,13 @@ class DeterministicFieldMapper:
         """
         logger.info(f"Processing Excel file: {file_path}")
 
-        # Read Excel file
+        # Read Excel file with Polars
         if sheet_name:
-            df = pd.read_excel(file_path, sheet_name=sheet_name)
+            df = pl.read_excel(file_path, sheet_name=sheet_name)
             sheets = {sheet_name: df}
         else:
             # Read all sheets
-            sheets = pd.read_excel(file_path, sheet_name=None)
+            sheets = pl.read_excel(file_path, sheet_id=None)
 
         # Process each sheet
         all_mappings = {}
@@ -188,8 +187,8 @@ class DeterministicFieldMapper:
         """
         logger.info(f"Processing CSV file: {file_path}")
 
-        # Read CSV file
-        df = pd.read_csv(file_path)
+        # Read CSV file with Polars
+        df = pl.read_csv(file_path)
         sheet_name = file_path.stem  # Use filename as sheet name
 
         # Profile all columns
@@ -218,15 +217,15 @@ class DeterministicFieldMapper:
 
     def map_dataframe(
         self,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         sheet_name: str = "Data",
         selected_modules: Optional[List[str]] = None
     ) -> Dict[str, List[FieldMapping]]:
         """
-        Map a pandas DataFrame to Odoo fields.
+        Map a Polars DataFrame to Odoo fields.
 
         Args:
-            df: Pandas DataFrame to map
+            df: Polars DataFrame to map
             sheet_name: Name for this dataset
             selected_modules: Optional list of module names to constrain matching
 

@@ -30,8 +30,11 @@ class ColumnProfiler:
             excel_file = pd.ExcelFile(self.file_path)
             for sheet_name in excel_file.sheet_names:
                 df_pandas = pd.read_excel(excel_file, sheet_name=sheet_name)
-                # Convert to Polars
-                df = pl.from_pandas(df_pandas)
+                # Convert all columns to string to avoid PyArrow type errors
+                # Let Polars infer types properly after conversion
+                df_pandas = df_pandas.astype(str)
+                # Convert to Polars with string schema
+                df = pl.from_pandas(df_pandas, schema_overrides={col: pl.Utf8 for col in df_pandas.columns})
                 results[sheet_name] = self._profile_dataframe(df)
         elif self.file_path.suffix.lower() == '.csv':
             # CSV file - read directly with Polars
@@ -176,3 +179,28 @@ class ColumnProfiler:
             patterns['currency'] = float(currency_matches / total)
 
         return patterns
+
+    def _detect_data_type(self, series: pl.Series) -> str:
+        """Detect the data type of a series."""
+        # Get basic Polars dtype
+        dtype = series.dtype
+
+        # Convert to string for analysis
+        if dtype == pl.String:
+            return "string"
+        elif dtype == pl.Int64:
+            return "integer" 
+        elif dtype == pl.Float64:
+            return "float"
+        elif dtype == pl.Boolean:
+            return "boolean"
+        elif dtype == pl.Date:
+            return "date"
+        elif dtype == pl.Datetime:
+            return "datetime"
+        elif dtype == pl.Duration:
+            return "duration"
+        elif dtype == pl.Categorical:
+            return "categorical"
+        else:
+            return "string"  # Default to string for unknown types

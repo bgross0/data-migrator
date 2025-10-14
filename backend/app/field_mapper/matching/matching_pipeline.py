@@ -235,7 +235,92 @@ class MatchingPipeline:
 
         logger.info(f"Successfully matched {len(results)} columns")
 
+        lambda_mappings = self._generate_lambda_suggestions(
+            column_profiles,
+            results
+        )
+        if lambda_mappings:
+            logger.info(
+                "Generated %s lambda-based mapping suggestion(s)",
+                len(lambda_mappings),
+            )
+            results.update(lambda_mappings)
+
         return results
+
+    def _generate_lambda_suggestions(
+        self,
+        column_profiles: List[ColumnProfile],
+        existing_results: Dict[str, List[FieldMapping]],
+    ) -> Dict[str, List[FieldMapping]]:
+        """
+        Create heuristic lambda mapping suggestions based on available columns.
+
+        Currently supports combining first/last name style columns into
+        res.partner.name.
+        """
+        suggestions: Dict[str, List[FieldMapping]] = {}
+
+        column_names = [profile.column_name for profile in column_profiles]
+        first_name_cols = [
+            name for name in column_names if self._looks_like_first_name(name)
+        ]
+        last_name_cols = [
+            name for name in column_names if self._looks_like_last_name(name)
+        ]
+
+        if not first_name_cols or not last_name_cols:
+            return suggestions
+
+        # Prefer the first detected columns for heuristics.
+        first_col = first_name_cols[0]
+        last_col = last_name_cols[0]
+
+        virtual_column = "lambda_name"
+
+        # Avoid duplicating an existing lambda suggestion.
+        if virtual_column in existing_results or virtual_column in suggestions:
+            return suggestions
+
+        lambda_fn = (
+            "lambda self, row, **kwargs: (' '.join("
+            f"str(part).strip() for part in (row.get('{first_col}'), row.get('{last_col}')) if part"
+            ")) or None"
+        )
+
+        mapping = FieldMapping(
+            source_column=virtual_column,
+            target_model="res.partner",
+            target_field="name",
+            confidence=0.85,
+            scores={"lambda_heuristic": 0.85},
+            rationale=(
+                f"[LambdaHeuristics] Combine '{first_col}' and '{last_col}' "
+                "into res.partner name"
+            ),
+            matching_strategy="LambdaHeuristics",
+            alternatives=[],
+            transformations=[],
+            mapping_type="lambda",
+            lambda_function=lambda_fn,
+            lambda_dependencies=[first_col, last_col],
+        )
+
+        suggestions[virtual_column] = [mapping]
+        return suggestions
+
+    @staticmethod
+    def _normalize_header(value: str) -> str:
+        """Normalize a column header for rule-based detection."""
+        return value.lower().replace("_", " ").strip()
+
+    def _looks_like_first_name(self, value: str) -> bool:
+        normalized = self._normalize_header(value)
+        return "first" in normalized and "name" in normalized
+
+    def _looks_like_last_name(self, value: str) -> bool:
+        normalized = self._normalize_header(value)
+        return "last" in normalized and "name" in normalized
 
     def _merge_duplicates(
         self,
@@ -322,6 +407,10 @@ class MatchingPipeline:
             matching_strategy=f"Combined[{', '.join(strategies_used)}]",
             alternatives=[],
             transformations=best.transformations,
+            mapping_type=best.mapping_type,
+            lambda_function=best.lambda_function,
+            lambda_dependencies=best.lambda_dependencies,
+            data_type=best.data_type,
         )
 
         return merged

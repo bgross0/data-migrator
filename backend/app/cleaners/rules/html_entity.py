@@ -3,15 +3,19 @@ HTML entity decoding rule.
 
 Decodes HTML entities like &amp;, &lt;, &gt; to their actual characters.
 """
-import pandas as pd
 import html
 import logging
+from typing import Callable
+
+import polars as pl
 
 from ..base import CleaningRule, CleaningResult, ChangeType
 from ..config import CleaningConfig
 
 
 logger = logging.getLogger(__name__)
+
+_HTML_ENTITY_PATTERN = r"&[a-zA-Z]+;|&#\d+;"
 
 
 class HTMLEntityRule(CleaningRule):
@@ -42,60 +46,82 @@ class HTMLEntityRule(CleaningRule):
     def description(self) -> str:
         return "Decode HTML entities (&amp;, &lt;, etc.) to actual characters"
 
-    def clean(self, df: pd.DataFrame) -> CleaningResult:
+    def _decode_fn(self) -> Callable[[str], str]:
+        """Return a decoder function bound once for map_elements."""
+        return lambda value: html.unescape(value) if value is not None else None
+
+    def clean(self, df: pl.DataFrame) -> CleaningResult:
         """
         Decode HTML entities in all string columns.
 
         Args:
-            df: Input DataFrame
+            df: Input Polars DataFrame
 
         Returns:
             CleaningResult with decoded values
         """
-        result = CleaningResult(df=df.copy())
+        result = CleaningResult(df=df.clone())
 
         columns_cleaned = 0
         values_cleaned = 0
+        decoder = self._decode_fn()
 
-        # Process each column with object dtype (strings)
-        for col in result.df.columns:
-            if result.df[col].dtype == 'object':
-                # Find values that contain HTML entities
-                mask = result.df[col].notna()
-                if mask.any():
-                    # Check for common HTML entities
-                    has_entities = result.df.loc[mask, col].astype(str).str.contains(
-                        r'&[a-zA-Z]+;|&#\d+;',
-                        regex=True,
-                        na=False
-                    )
+        for column_name in result.df.columns:
+            column = result.df[column_name]
 
-                    if has_entities.any():
-                        # Decode entities
-                        before = result.df.loc[mask, col].astype(str)
-                        after = before.apply(html.unescape)
+            if column.dtype not in (pl.Utf8, pl.String):
+                continue
 
-                        # Count actual changes
-                        changed = (before != after).sum()
+            # Identify candidate rows containing HTML entities
+            contains_entities = (
+                column.str.contains(_HTML_ENTITY_PATTERN)
+                .fill_null(False)
+            )
 
-                        if changed > 0:
-                            result.df.loc[mask, col] = after
-                            columns_cleaned += 1
-                            values_cleaned += changed
+            entity_count = int(contains_entities.sum())
+            if entity_count == 0:
+                continue
 
-                            result.add_change(
-                                ChangeType.VALUE_MODIFIED,
-                                f"Decoded HTML entities in column '{col}'",
-                                {"column": col, "values_modified": changed}
-                            )
-                            logger.debug(f"Decoded HTML entities in {changed} values in column '{col}'")
+            # Decode entities and count actual changes
+            decoded = column.map_elements(decoder, return_dtype=pl.Utf8)
+            changed_mask = (
+                column.is_not_null()
+                & decoded.is_not_null()
+                & (column != decoded)
+            )
+            changed = int(changed_mask.sum())
+
+            if changed == 0:
+                continue
+
+            columns_cleaned += 1
+            values_cleaned += changed
+
+            result.df = result.df.with_columns(
+                decoded.alias(column_name)
+            )
+
+            result.add_change(
+                ChangeType.VALUE_MODIFIED,
+                f"Decoded HTML entities in column '{column_name}'",
+                {"column": column_name, "values_modified": changed},
+            )
+            logger.debug(
+                "Decoded HTML entities in %s values for column '%s'",
+                changed,
+                column_name,
+            )
 
         result.stats["columns_cleaned"] = columns_cleaned
         result.stats["values_cleaned"] = values_cleaned
         result.stats["total_columns"] = len(result.df.columns)
 
         if values_cleaned > 0:
-            logger.info(f"Decoded HTML entities in {values_cleaned} values across {columns_cleaned} columns")
+            logger.info(
+                "Decoded HTML entities in %s values across %s columns",
+                values_cleaned,
+                columns_cleaned,
+            )
         else:
             logger.info("No HTML entities found")
 

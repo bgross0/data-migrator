@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Dict, List, Any
 import polars as pl
 from collections import defaultdict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ImportService:
@@ -154,19 +157,46 @@ class ImportService:
 
             # Process each model's mappings
             for model, model_mapping_list in model_mappings.items():
-                # Apply transformations based on mapping type
-                for mapping in model_mapping_list:
-                    if mapping.mapping_type == "lambda" and mapping.lambda_function:
-                        # Apply lambda transformation
-                        df = self.lambda_transformer.apply_lambda_mapping(
-                            df,
+                # Apply lambda mappings first to preserve original column names
+                lambda_mappings = [
+                    m for m in model_mapping_list if m.mapping_type == "lambda"
+                ]
+                direct_mappings = [
+                    m for m in model_mapping_list if m.mapping_type != "lambda"
+                ]
+
+                for mapping in lambda_mappings:
+                    missing_dependencies = [
+                        dep for dep in (mapping.lambda_dependencies or []) if dep not in df.columns
+                    ]
+                    if missing_dependencies:
+                        logger.warning(
+                            "Skipping lambda mapping '%s.%s': missing dependencies %s",
+                            model,
                             mapping.target_field,
-                            mapping.lambda_function
+                            ", ".join(missing_dependencies),
                         )
-                    elif mapping.mapping_type == "direct":
-                        # Simple column rename for direct mappings
-                        if mapping.header_name in df.columns and mapping.target_field:
-                            df = df.rename({mapping.header_name: mapping.target_field})
+                        continue
+
+                    if not mapping.lambda_function:
+                        logger.warning(
+                            "Skipping lambda mapping '%s.%s': lambda_function not set",
+                            model,
+                            mapping.target_field,
+                        )
+                        continue
+
+                    df = self.lambda_transformer.apply_lambda_mapping(
+                        df,
+                        mapping.target_field,
+                        mapping.lambda_function,
+                        getattr(mapping, "data_type", None),
+                    )
+
+                # Apply direct mappings (column renames)
+                for mapping in direct_mappings:
+                    if mapping.header_name in df.columns and mapping.target_field:
+                        df = df.rename({mapping.header_name: mapping.target_field})
 
                 # Convert Polars DataFrame to list of records
                 records = df.to_dicts()

@@ -1,24 +1,27 @@
 """
-Whitespace cleaning rule.
+Whitespace cleaning rule implemented for Polars DataFrames.
 
-Trims leading/trailing whitespace from all text values.
+Trims leading/trailing whitespace from all text values and optionally
+normalises internal spacing.
 """
-import pandas as pd
+from __future__ import annotations
+
 import logging
+from typing import Optional
 
-from ..base import CleaningRule, CleaningResult, ChangeType
+import polars as pl
+
+from ..base import ChangeType, CleaningResult, CleaningRule
 from ..config import CleaningConfig
-
 
 logger = logging.getLogger(__name__)
 
 
 class WhitespaceRule(CleaningRule):
     """
-    Trims leading and trailing whitespace from all text values.
+    Trim whitespace from string columns.
 
-    Real-world spreadsheets often have inconsistent whitespace from copy-paste,
-    data entry errors, or export formatting.
+    Mirrors the previous pandas-based behaviour while working with Polars.
     """
 
     def __init__(self, config: CleaningConfig):
@@ -36,56 +39,67 @@ class WhitespaceRule(CleaningRule):
     def description(self) -> str:
         return "Trim leading/trailing whitespace from all text values"
 
-    def clean(self, df: pd.DataFrame) -> CleaningResult:
+    def clean(self, df: pl.DataFrame) -> CleaningResult:
         """
         Trim whitespace from all string columns.
 
         Args:
-            df: Input DataFrame
+            df: Input Polars DataFrame
 
         Returns:
             CleaningResult with trimmed values
         """
-        result = CleaningResult(df=df.copy())
+        result = CleaningResult(df=df.clone())
 
         columns_cleaned = 0
         values_cleaned = 0
 
-        # Process each column with object dtype (strings)
-        for col in result.df.columns:
-            if result.df[col].dtype == 'object':
-                # Count values with whitespace issues before cleaning
-                mask = result.df[col].notna()
-                if mask.any():
-                    before = result.df.loc[mask, col].astype(str)
-                    after = before.str.strip()
+        for column_name in result.df.columns:
+            column = result.df[column_name]
 
-                    # Count changes
-                    changed = (before != after).sum()
+            if column.dtype not in (pl.Utf8, pl.String):
+                continue
 
-                    if changed > 0:
-                        result.df.loc[mask, col] = after
-                        columns_cleaned += 1
-                        values_cleaned += changed
+            non_null_mask = column.is_not_null()
+            if not bool(non_null_mask.any()):
+                continue
 
-                        result.add_change(
-                            ChangeType.VALUE_MODIFIED,
-                            f"Trimmed whitespace in column '{col}'",
-                            {"column": col, "values_modified": changed}
-                        )
-                        logger.debug(f"Trimmed {changed} values in column '{col}'")
+            trimmed = column.str.strip_chars()
+            if self.config.normalize_internal_spaces:
+                trimmed = trimmed.str.replace_all(r"\s+", " ")
 
-                    # Optional: Normalize internal spaces
-                    if self.config.normalize_internal_spaces and changed > 0:
-                        result.df.loc[mask, col] = result.df.loc[mask, col].str.replace(r'\s+', ' ', regex=True)
+            # Identify actual changes (ignoring nulls)
+            changed_mask = non_null_mask & (column != trimmed)
+            changed = int(changed_mask.sum())
+            if changed == 0:
+                continue
+
+            columns_cleaned += 1
+            values_cleaned += changed
+
+            result.df = result.df.with_columns(trimmed.alias(column_name))
+            result.add_change(
+                ChangeType.VALUE_MODIFIED,
+                f"Trimmed whitespace in column '{column_name}'",
+                {"column": column_name, "values_modified": changed},
+            )
+            logger.debug(
+                "Trimmed whitespace in %s values for column '%s'",
+                changed,
+                column_name,
+            )
 
         result.stats["columns_cleaned"] = columns_cleaned
         result.stats["values_cleaned"] = values_cleaned
         result.stats["total_columns"] = len(result.df.columns)
 
         if values_cleaned > 0:
-            logger.info(f"Trimmed whitespace from {values_cleaned} values across {columns_cleaned} columns")
+            logger.info(
+                "Trimmed whitespace from %s values across %s columns",
+                values_cleaned,
+                columns_cleaned,
+            )
         else:
-            logger.info("No whitespace issues found")
+            logger.info("No whitespace issues detected")
 
         return result

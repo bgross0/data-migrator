@@ -12,63 +12,112 @@ export default function Upload() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedModules, setSelectedModules] = useState<string[]>([])
   const [showModuleSelector, setShowModuleSelector] = useState(false)
-  const [suggestedModules, setSuggestedModules] = useState<string[]>([])
+  
   const navigate = useNavigate()
+
+  const DEFAULT_UPLOAD_STEPS: StatusStep[] = [
+    { id: 'upload', label: 'Uploading file...', status: 'in_progress' },
+    { id: 'profile', label: 'Analyzing columns and detecting types...', status: 'pending' },
+    { id: 'complete', label: 'Profiling complete!', status: 'pending' }
+  ]
+
+  const pollOperationStatus = async (operationId: string) => {
+    while (true) {
+      const status = await operationsApi.getStatus(operationId)
+
+      const steps = Array.isArray(status?.steps) && status.steps.length > 0
+        ? status.steps.map((step: any) => ({
+            id: String(step.id),
+            label: step.label ?? '',
+            status: (step.status ?? 'pending') as StatusStep['status'],
+            detail: step.detail,
+          }))
+        : DEFAULT_UPLOAD_STEPS
+
+      setUploadSteps(steps)
+
+      if (typeof status?.progress === 'number') {
+        setUploadProgress(status.progress)
+      }
+
+      if (status?.status === 'complete') {
+        return status
+      }
+
+      if (status?.status === 'error') {
+        const detail =
+          status?.error ||
+          steps.find((s: StatusStep) => s.status === 'error')?.detail ||
+          'Upload failed'
+        throw new Error(detail)
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return
 
     setUploading(true)
+    setUploadSteps(DEFAULT_UPLOAD_STEPS)
+    setUploadProgress(5)
 
     try {
-      // Start upload - backend returns operation_id
       const response = await datasetsApi.upload(file, name || undefined)
-      const operationId = response.operation_id
       const datasetId = response.id
+      const operationId = response.operation_id
 
-      // Poll for real progress from backend
-      const pollInterval = setInterval(async () => {
+      if (operationId) {
         try {
-          const statusResponse = await fetch(`/api/v1/operations/${operationId}/status`)
-          const status = await statusResponse.json()
-
-          // Update steps and progress from REAL backend data
-          setUploadSteps(status.steps || [])
-          setUploadProgress(status.progress || 0)
-
-          // Check if complete
-          if (status.status === 'complete') {
-            clearInterval(pollInterval)
-
-            // Set selected modules if any were chosen
-            if (selectedModules.length > 0) {
-              try {
-                await modulesApi.setDatasetModules(datasetId, selectedModules)
-              } catch (moduleError) {
-                console.error('Failed to set modules:', moduleError)
-              }
+          await pollOperationStatus(operationId)
+          setUploadProgress(100)
+        } catch (statusError) {
+          setUploadSteps([
+            {
+              id: 'upload',
+              label: 'Uploading file...',
+              status: 'error',
+              detail: statusError instanceof Error ? statusError.message : 'Upload failed'
             }
-
-            // Small delay to show success state
-            setTimeout(() => {
-              navigate(`/datasets/${datasetId}`)
-            }, 800)
-          } else if (status.status === 'error') {
-            clearInterval(pollInterval)
-            alert(`Upload failed: ${status.error}`)
-            setUploading(false)
-          }
-        } catch (pollError) {
-          console.error('Error polling status:', pollError)
-          // Continue polling even if one request fails
+          ])
+          throw statusError
         }
-      }, 500) // Poll every 500ms for real-time feel
+      } else {
+        // No operation tracking available; mark steps as complete manually
+        setUploadSteps(DEFAULT_UPLOAD_STEPS.map(step => ({ ...step, status: 'complete' })))
+        setUploadProgress(100)
+      }
+
+      // Set selected modules if any were chosen
+      if (selectedModules.length > 0) {
+        try {
+          await modulesApi.setDatasetModules(datasetId, selectedModules)
+        } catch (moduleError) {
+          console.error('Failed to set modules:', moduleError)
+        }
+      }
+
+      // Small delay to show success state
+      setTimeout(() => {
+        setUploading(false)
+        navigate(`/datasets/${datasetId}`)
+      }, 600)
 
     } catch (error) {
       console.error('Upload failed:', error)
+      setUploadSteps([
+        {
+          id: 'upload',
+          label: 'Uploading file...',
+          status: 'error',
+          detail: error instanceof Error ? error.message : 'Upload failed'
+        }
+      ])
       alert('Upload failed. Please try again.')
       setUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -131,7 +180,6 @@ export default function Upload() {
                 <ModuleSelector
                   selectedModules={selectedModules}
                   onModulesChange={setSelectedModules}
-                  suggestedModules={suggestedModules}
                 />
               </div>
             )}
@@ -152,7 +200,6 @@ export default function Upload() {
         title="Processing Upload"
         steps={uploadSteps}
         progress={uploadProgress}
-        estimatedTime="About 15-30 seconds"
       />
     </>
   )

@@ -242,6 +242,10 @@ class FieldMapping:
     constraint_violations: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     status: MappingStatus = MappingStatus.PENDING
+    mapping_type: str = "direct"  # direct, lambda, join, etc.
+    lambda_function: Optional[str] = None
+    lambda_dependencies: List[str] = field(default_factory=list)
+    data_type: Optional[str] = None
 
 
 @dataclass

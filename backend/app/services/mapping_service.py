@@ -182,22 +182,34 @@ class MappingService:
                 is_csv = file_ext == '.csv' or '.csv' in file_path.name
 
                 if is_excel:
-                    df = pl.read_excel(file_path, sheet_name=sheet.name)
+                    # Try multiple Excel reading methods with fallbacks
+                    try:
+                        # First try: Use fastexcel (default, fastest)
+                        df = pl.read_excel(file_path, sheet_name=sheet.name)
+                    except ModuleNotFoundError as e:
+                        if 'fastexcel' in str(e):
+                            print(f"WARNING: fastexcel not available, trying openpyxl...")
+                            try:
+                                # Second try: Use openpyxl engine
+                                df = pl.read_excel(file_path, sheet_name=sheet.name, engine="openpyxl")
+                            except Exception as e2:
+                                print(f"WARNING: openpyxl failed, using pandas fallback: {e2}")
+                                # Third try: Use pandas and convert to Polars
+                                import pandas as pd
+                                pandas_df = pd.read_excel(file_path, sheet_name=sheet.name)
+                                df = pl.from_pandas(pandas_df)
+                        else:
+                            raise
                 elif is_csv:
                     df = pl.read_csv(file_path)
                 else:
                     continue
 
-                # Convert to pandas temporarily for deterministic field mapper
-                # TODO: Update deterministic field mapper to use Polars natively
-                import pandas as pd
-                pandas_df = df.to_pandas()
-
-                # Use deterministic field mapper
+                # Use deterministic field mapper (now supports Polars natively)
                 # map_dataframe returns Dict[str, List[FieldMapping]]
                 # Structure: {column_name: [FieldMapping, ...]}
                 sheet_mappings = self.deterministic_mapper.map_dataframe(
-                    pandas_df,
+                    df,
                     sheet_name=sheet.name,
                     selected_modules=selected_modules
                 )
@@ -225,6 +237,29 @@ class MappingService:
                         chosen=False,
                         rationale=top_mapping.rationale,
                     )
+
+                    if hasattr(top_mapping, "mapping_type"):
+                        mapping.mapping_type = top_mapping.mapping_type or "direct"
+
+                    if mapping.mapping_type == "lambda":
+                        mapping.header_name = column_name or f"lambda_{top_mapping.target_field}"
+                        if getattr(top_mapping, "lambda_function", None):
+                            mapping.lambda_function = top_mapping.lambda_function
+                        if getattr(top_mapping, "lambda_dependencies", None):
+                            mapping.join_config = {
+                                "lambda_dependencies": top_mapping.lambda_dependencies
+                            }
+                        if getattr(top_mapping, "data_type", None):
+                            mapping.join_config = mapping.join_config or {}
+                            mapping.join_config["data_type"] = top_mapping.data_type
+                        if getattr(top_mapping, "lambda_dependencies", None):
+                            deps = ", ".join(top_mapping.lambda_dependencies)
+                            mapping.rationale = (
+                                f"{mapping.rationale} (lambda dependencies: {deps})"
+                                if mapping.rationale
+                                else f"Lambda dependencies: {deps}"
+                            )
+
                     self.db.add(mapping)
                     self.db.flush()
 
@@ -360,6 +395,10 @@ class MappingService:
             lambda_function=lambda_function,
             rationale=f"Lambda transformation for {target_field}"
         )
+        mapping.join_config = {
+            "lambda_dependencies": [],
+            "data_type": None,
+        }
         self.db.add(mapping)
         self.db.commit()
         self.db.refresh(mapping)

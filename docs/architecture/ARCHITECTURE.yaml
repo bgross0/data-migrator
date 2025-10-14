@@ -1,0 +1,628 @@
+# Data Migrator - System Architecture (Machine-Readable)
+#
+# This file provides semantic annotations for AI agents to understand
+# the system architecture, module responsibilities, and integration points.
+#
+# Usage for AI agents:
+#   import yaml
+#   with open('ARCHITECTURE.yaml') as f:
+#       arch = yaml.safe_load(f)
+#   # Query specific module info
+#   field_mapper_info = arch['modules']['field_mapper']
+
+metadata:
+  system_name: "Data Migrator"
+  version: "1.0.0"
+  purpose: "Intelligent data migration platform for importing messy spreadsheets into Odoo"
+  stack:
+    backend: "FastAPI + Celery + SQLAlchemy + Postgres + Redis"
+    frontend: "React + TypeScript + Vite + Tailwind CSS"
+    data_processing: "Polars (primary) + Pandas (legacy)"
+    odoo_integration: "JSON-RPC (no direct database access)"
+
+  architecture_patterns:
+    - "Layered architecture (API → Services → Core → Database)"
+    - "Async task processing (Celery for long-running operations)"
+    - "Deterministic field mapping (rule-based + ML-assisted)"
+    - "Two-phase import (parents first, then children)"
+
+#
+# MODULE HIERARCHY
+#
+modules:
+  # ========================================
+  # FIELD MAPPER - Core Mapping Engine
+  # ========================================
+  field_mapper:
+    path: "backend/app/field_mapper/"
+    purpose: "Deterministic field mapping engine using Odoo dictionary"
+    description: |
+      Analyzes spreadsheet columns and matches them to Odoo fields using
+      8 matching strategies, business context analysis, and data profiling.
+      Uses actual Odoo dictionary files (not hardcoded rules).
+
+    entry_points:
+      - name: "DeterministicFieldMapper"
+        file: "main.py"
+        class: "DeterministicFieldMapper"
+        methods:
+          - name: "map_file"
+            purpose: "Maps an Excel/CSV file to Odoo fields"
+            params: ["file_path", "sheet_name"]
+            returns: "MappingResult"
+
+          - name: "map_dataframe"
+            purpose: "Maps a Polars DataFrame to Odoo fields"
+            params: ["df", "sheet_name", "selected_modules"]
+            returns: "Dict[str, List[FieldMapping]]"
+            note: "Main entry point used by services layer"
+
+    submodules:
+      config:
+        purpose: "Configuration and settings"
+        files:
+          - "settings.py: FieldMapperSettings dataclass"
+          - "logging_config.py: Logger configuration"
+
+      core:
+        purpose: "Core data structures and knowledge base"
+        files:
+          - "knowledge_base.py: OdooKnowledgeBase - loads odoo-dictionary"
+          - "data_structures.py: FieldMapping, ColumnProfile, MappingResult"
+          - "module_registry.py: OdooModuleRegistry - 10 module groups"
+
+        key_classes:
+          - name: "OdooKnowledgeBase"
+            purpose: "Loads and indexes Odoo dictionary (520 models, 9,947 fields)"
+            methods:
+              - "load_from_dictionary(): Loads all Excel dictionary files"
+              - "get_model(name): Returns OdooModel object"
+              - "get_field(model, field): Returns OdooField object"
+              - "search_fields(query): Searches fields by name/label"
+
+          - name: "OdooModuleRegistry"
+            purpose: "Groups 520 models into 10 logical module groups"
+            module_groups:
+              - "sales_crm: 21 models (sale.order, crm.lead, etc.)"
+              - "contacts_partners: 15 models (res.partner, etc.)"
+              - "accounting: 45 models (account.move, etc.)"
+              - "inventory: 38 models (stock.move, etc.)"
+              - "projects: 12 models (project.project, etc.)"
+              - "hr: 28 models (hr.employee, etc.)"
+              - "website: 18 models (website.page, etc.)"
+              - "manufacturing: 22 models (mrp.production, etc.)"
+              - "purchase: 18 models (purchase.order, etc.)"
+              - "fleet: 8 models (fleet.vehicle, etc.)"
+            methods:
+              - "get_models_for_groups(group_names): Filters models by module"
+              - "suggest_groups_from_columns(columns): Auto-detects modules"
+            impact: "Reduces search space from 9,947 fields to ~500 fields (10x)"
+
+      profiling:
+        purpose: "Column analysis and data type detection"
+        files:
+          - "column_profiler.py: ColumnProfiler class"
+
+        key_classes:
+          - name: "ColumnProfiler"
+            purpose: "Analyzes spreadsheet columns (data types, patterns, quality)"
+            methods:
+              - "profile_dataframe(df): Profiles all columns in DataFrame"
+              - "profile_column(name, data): Profiles single column"
+            detects:
+              - "Data types: integer, float, string, boolean, date, email, phone"
+              - "Patterns: currency, percentage, URLs, IDs"
+              - "Quality metrics: null%, unique%, cardinality"
+            performance: "401,330 rows/second (Polars)"
+
+      matching:
+        purpose: "Orchestrates 8 matching strategies"
+        files:
+          - "matching_pipeline.py: MatchingPipeline class"
+          - "base_strategy.py: BaseStrategy abstract class"
+          - "business_context_analyzer.py: Detects business domain"
+          - "cell_data_analyzer.py: Analyzes cell values"
+          - "compound_name_parser.py: Parses 'Customer Name' → 'Customer' + 'Name'"
+          - "matching_context.py: Shared context for strategies"
+          - "strategies/: 8 concrete matching strategies"
+
+        key_classes:
+          - name: "MatchingPipeline"
+            purpose: "Runs all strategies, merges results, ranks by confidence"
+            methods:
+              - "match_column(profile, all_profiles, target_models): Match single column"
+              - "match_sheet(profiles, sheet_name, selected_modules): Match all columns"
+            flow: |
+              1. Detect candidate models (BusinessContextAnalyzer)
+              2. Filter by selected modules (if provided)
+              3. Run all 8 strategies in parallel
+              4. Merge duplicate candidates
+              5. Apply model priority (boost/penalize based on context)
+              6. Rank by confidence
+              7. Generate lambda suggestions (heuristics)
+              8. Return top N results
+
+        strategies:
+          - name: "ExactNameMatchStrategy"
+            weight: 1.5
+            purpose: "Exact field name match (e.g., 'email' → 'email')"
+
+          - name: "LabelMatchStrategy"
+            weight: 1.3
+            purpose: "Matches against field labels (e.g., 'E-mail' → field.label='Email')"
+
+          - name: "FuzzyMatchStrategy"
+            weight: 0.8
+            purpose: "Fuzzy string matching (e.g., 'cust_name' → 'customer_name')"
+
+          - name: "PatternMatchStrategy"
+            weight: 1.2
+            purpose: "Pattern-based (e.g., '@' pattern → email fields)"
+
+          - name: "DataTypeCompatibilityStrategy"
+            weight: 1.0
+            purpose: "Type compatibility (e.g., integer column → integer field)"
+
+          - name: "SelectionValueMatchStrategy"
+            weight: 1.4
+            purpose: "Matches cell values to selection field options"
+
+          - name: "ContextualMatchStrategy"
+            weight: 1.1
+            purpose: "Uses context from other columns"
+
+          - name: "StatisticalSimilarityStrategy"
+            weight: 0.9
+            purpose: "Statistical distribution matching"
+
+      executor:
+        purpose: "Executes mappings and splits data by model"
+        files:
+          - "mapping_executor.py: MappingExecutor class"
+
+        key_methods:
+          - name: "execute_by_model"
+            purpose: "Splits DataFrame by target model for multi-model imports"
+            input: "Single DataFrame + mappings"
+            output: "Dict[model_name, DataFrame]"
+            example: |
+              Input: DataFrame with columns: Customer Name, Project Name, Task Name
+              Output: {
+                'res.partner': DataFrame(['name']),
+                'project.project': DataFrame(['name']),
+                'project.task': DataFrame(['name'])
+              }
+
+  # ========================================
+  # SERVICES - Business Logic Layer
+  # ========================================
+  services:
+    path: "backend/app/services/"
+    purpose: "Business logic layer between API and core modules"
+    description: |
+      Orchestrates workflows, manages database transactions,
+      coordinates Celery tasks, and bridges API layer to core functionality.
+
+    key_services:
+      MappingService:
+        file: "mapping_service.py"
+        purpose: "Manages field mapping generation and storage"
+
+        methods:
+          - name: "generate_mappings(dataset_id)"
+            approach: "Legacy - uses HeaderMatcher (hardcoded rules)"
+            when_to_use: "Fallback when deterministic mapper unavailable"
+
+          - name: "generate_mappings_v2(dataset_id, use_deterministic=True)"
+            approach: "Modern - uses DeterministicFieldMapper (odoo-dictionary)"
+            when_to_use: "Default for all new mapping generation"
+            flow: |
+              1. Delete existing mappings for dataset
+              2. Load dataset + sheets from database
+              3. Check for selected_modules (module filtering)
+              4. For each sheet:
+                 a. Read file (Excel/CSV) → Polars DataFrame
+                 b. Call DeterministicFieldMapper.map_dataframe()
+                 c. Store mappings + suggestions in database
+              5. Commit transaction
+              6. Return list of Mapping objects
+            database_writes:
+              - "mappings: Main mapping records"
+              - "suggestions: Alternative candidates (top 5)"
+
+          - name: "generate_mappings_hybrid(dataset_id)"
+            approach: "Hybrid - combines context analysis + knowledge base + patterns"
+            when_to_use: "When you want best of both worlds"
+            flow: |
+              Similar to v2 but uses HybridMatcher instead of DeterministicFieldMapper.
+              HybridMatcher = BusinessContextAnalyzer + OdooKnowledgeBase + HeaderMatcher
+
+          - name: "create_lambda_mapping(dataset_id, sheet_id, target_field, lambda_function, target_model)"
+            purpose: "Creates lambda transformation mapping (user-defined)"
+            example: "Combine FirstName + LastName into full_name"
+
+          - name: "update_mapping(mapping_id, mapping_data)"
+            purpose: "User confirms/rejects/modifies a mapping"
+
+          - name: "delete_mapping(mapping_id)"
+            purpose: "User deletes a mapping"
+
+        dependencies:
+          - "DeterministicFieldMapper: For map_dataframe()"
+          - "HybridMatcher: For hybrid approach"
+          - "HeaderMatcher: For legacy approach"
+          - "LambdaTransformer: For lambda execution"
+          - "Database: Mapping, Suggestion, Dataset, Sheet models"
+
+      DatasetService:
+        file: "dataset_service.py"
+        purpose: "Manages dataset lifecycle (upload, profile, clean)"
+        methods:
+          - "create_dataset(file, name): Uploads file, creates dataset"
+          - "profile_dataset(dataset_id): Triggers Celery profiling task"
+          - "clean_dataset(dataset_id, rules): Applies cleaning rules"
+
+      ImportService:
+        file: "import_service.py"
+        purpose: "Orchestrates Odoo imports using two-phase approach"
+        methods:
+          - "execute_import(dataset_id, connection_id): Runs import"
+        flow: |
+          1. Build ImportGraph (topological sort of models)
+          2. Group mappings by model
+          3. For each model in order:
+             Phase A: Import parent records → store in KeyMap
+             Phase B: Import child records → resolve FKs via KeyMap
+
+      OdooMigrateExportService:
+        file: "odoo_migrate_export.py"
+        purpose: "Generates odoo-migrate compatible export packages"
+        methods:
+          - "generate_export_package(dataset_id): Creates ZIP with CSVs + config"
+
+  # ========================================
+  # API - FastAPI Route Handlers
+  # ========================================
+  api:
+    path: "backend/app/api/"
+    purpose: "FastAPI route handlers (HTTP → Services)"
+    description: "Thin layer that validates requests and delegates to services"
+
+    key_routes:
+      mappings:
+        file: "mappings.py"
+        routes:
+          - endpoint: "GET /api/v1/datasets/{id}/mappings"
+            handler: "get_dataset_mappings"
+            service_call: "MappingService.get_mappings_for_dataset()"
+            returns: "List of mappings with suggestions"
+
+          - endpoint: "POST /api/v1/datasets/{id}/mappings/generate"
+            handler: "generate_mappings"
+            params: ["dataset_id", "use_deterministic=True"]
+            service_call: "MappingService.generate_mappings_v2()"
+            returns: "Newly generated mappings"
+            note: "This is the main mapping generation endpoint"
+
+          - endpoint: "PUT /api/v1/mappings/{id}"
+            handler: "update_mapping"
+            service_call: "MappingService.update_mapping()"
+            purpose: "User confirms/modifies mapping"
+
+          - endpoint: "DELETE /api/v1/mappings/{id}"
+            handler: "delete_mapping"
+            service_call: "MappingService.delete_mapping()"
+
+      datasets:
+        file: "datasets.py"
+        routes:
+          - endpoint: "POST /api/v1/datasets"
+            handler: "create_dataset"
+            service_call: "DatasetService.create_dataset()"
+
+          - endpoint: "POST /api/v1/datasets/{id}/profile"
+            handler: "profile_dataset"
+            service_call: "Celery task: profile_dataset.delay()"
+            async: true
+
+  # ========================================
+  # CORE - Shared Utilities
+  # ========================================
+  core:
+    path: "backend/app/core/"
+    purpose: "Shared utilities, matchers, transformers"
+
+    key_files:
+      config.py:
+        purpose: "Settings from environment variables"
+        settings:
+          - "DATABASE_URL: Postgres connection"
+          - "REDIS_URL: Celery broker"
+          - "ODOO_DICTIONARY_PATH: Path to odoo-dictionary/"
+          - "ANTHROPIC_API_KEY: For AI-powered matching (optional)"
+
+      database.py:
+        purpose: "SQLAlchemy session management"
+        provides: "get_db() dependency for FastAPI"
+
+      matcher.py:
+        purpose: "Legacy HeaderMatcher (hardcoded rules)"
+        note: "Being replaced by DeterministicFieldMapper"
+
+      hybrid_matcher.py:
+        purpose: "Combines multiple matching approaches"
+        flow: "BusinessContext + Knowledge Base + Hardcoded Rules"
+
+      lambda_transformer.py:
+        purpose: "Executes lambda transformations on DataFrames"
+        example: "Apply 'lambda row: row['first'] + ' ' + row['last']'"
+
+      profiler.py:
+        purpose: "Legacy profiler (pandas-based)"
+        note: "Replaced by field_mapper/profiling/column_profiler.py (Polars)"
+
+      transformer.py:
+        purpose: "Data cleaning transformations"
+        transforms:
+          - "trim: Remove whitespace"
+          - "phone_normalize: Format phone numbers"
+          - "email_normalize: Lowercase emails"
+          - "currency_to_float: Parse currency strings"
+          - "split_name: Split full names"
+
+      celery_app.py:
+        purpose: "Celery configuration for async tasks"
+        tasks:
+          - "profile_dataset: Column profiling (long-running)"
+          - "execute_import: Odoo import (long-running)"
+
+  # ========================================
+  # MODELS - Database ORM
+  # ========================================
+  models:
+    path: "backend/app/models/"
+    purpose: "SQLAlchemy ORM models (database schema)"
+
+    key_models:
+      Dataset:
+        file: "source.py"
+        purpose: "Represents an uploaded file with sheets"
+        fields:
+          - "id: Primary key"
+          - "name: User-provided name"
+          - "source_file_id: FK to SourceFile"
+          - "selected_modules: JSON array of module names"
+          - "detected_domain: Auto-detected business domain"
+          - "cleaned_file_path: Path to cleaned data"
+          - "profiling_status: pending|processing|complete|failed"
+        relationships:
+          - "sheets: One-to-many Sheet objects"
+          - "mappings: One-to-many Mapping objects"
+
+      Sheet:
+        file: "source.py"
+        purpose: "Represents a single sheet in a file"
+        fields:
+          - "id: Primary key"
+          - "dataset_id: FK to Dataset"
+          - "name: Sheet name"
+          - "n_rows: Row count"
+          - "n_cols: Column count"
+        relationships:
+          - "column_profiles: One-to-many ColumnProfile"
+
+      ColumnProfile:
+        file: "profile.py"
+        purpose: "Stores column analysis results"
+        fields:
+          - "sheet_id: FK to Sheet"
+          - "name: Column name"
+          - "detected_type: Data type"
+          - "null_percentage: % null values"
+          - "unique_count: # unique values"
+          - "samples: JSON array of sample values"
+          - "patterns: JSON of detected patterns"
+
+      Mapping:
+        file: "mapping.py"
+        purpose: "Maps a source column to an Odoo field"
+        fields:
+          - "id: Primary key"
+          - "dataset_id: FK to Dataset"
+          - "sheet_id: FK to Sheet"
+          - "header_name: Source column name"
+          - "target_model: Odoo model (e.g., 'res.partner')"
+          - "target_field: Odoo field (e.g., 'email')"
+          - "confidence: 0.0-1.0 confidence score"
+          - "status: pending|confirmed|ignored|create_field"
+          - "chosen: Boolean (user selected this)"
+          - "rationale: Why this mapping was suggested"
+          - "mapping_type: direct|lambda|join"
+          - "lambda_function: Lambda code (if type=lambda)"
+          - "join_config: JSON config (if type=join)"
+        relationships:
+          - "suggestions: One-to-many Suggestion (alternatives)"
+          - "transforms: One-to-many Transform (data cleaning)"
+
+      Suggestion:
+        file: "mapping.py"
+        purpose: "Stores alternative mapping candidates"
+        fields:
+          - "mapping_id: FK to Mapping"
+          - "candidates: JSON array of {model, field, confidence, rationale}"
+
+      Run:
+        file: "run.py"
+        purpose: "Tracks an import execution"
+        fields:
+          - "dataset_id: FK to Dataset"
+          - "odoo_connection_id: FK to OdooConnection"
+          - "status: pending|running|completed|failed"
+          - "started_at: Timestamp"
+          - "completed_at: Timestamp"
+        relationships:
+          - "keymaps: One-to-many KeyMap (source → Odoo ID mappings)"
+          - "logs: One-to-many RunLog (execution logs)"
+
+      KeyMap:
+        file: "run.py"
+        purpose: "Maps source values to created Odoo record IDs"
+        fields:
+          - "run_id: FK to Run"
+          - "source_model: Source sheet/model name"
+          - "source_field: Source field name"
+          - "source_value: Source value (e.g., 'Acme Corp')"
+          - "odoo_model: Target Odoo model"
+          - "odoo_id: Created Odoo record ID"
+        usage: |
+          During two-phase import:
+          Phase A: Import parents, store KeyMap entries
+          Phase B: Import children, look up parent IDs via KeyMap
+
+          Example:
+            KeyMap(source_value='Acme Corp', odoo_model='res.partner', odoo_id=42)
+            When importing project with customer='Acme Corp',
+            lookup returns partner_id=42
+
+#
+# DECISION TREES
+#
+decision_trees:
+  which_mapping_method:
+    question: "Which mapping generation method should be used?"
+    default: "generate_mappings_v2 (deterministic)"
+    options:
+      - condition: "use_deterministic=False"
+        method: "generate_mappings (legacy HeaderMatcher)"
+        why: "Fallback for testing or if dictionary unavailable"
+
+      - condition: "use_deterministic=True (default)"
+        method: "generate_mappings_v2 (DeterministicFieldMapper)"
+        why: "Uses odoo-dictionary, highest accuracy"
+
+      - condition: "Explicitly call generate_mappings_hybrid()"
+        method: "generate_mappings_hybrid (HybridMatcher)"
+        why: "Combines multiple approaches, best of both worlds"
+
+  should_use_module_filtering:
+    question: "Should module selection be used?"
+    recommendation: "YES - always improves accuracy"
+    benefits:
+      - "Reduces search space: 9,947 fields → ~500 fields (10x)"
+      - "Improves confidence: +15-30% average confidence boost"
+      - "Faster matching: Fewer fields to compare"
+      - "Better context: Constrains to relevant domain"
+
+    how_it_works: |
+      1. User selects modules in ModuleSelector UI
+      2. Frontend stores in Dataset.selected_modules (JSON array)
+      3. Backend passes to DeterministicFieldMapper.map_dataframe(selected_modules=[...])
+      4. MatchingPipeline filters knowledge base to only selected module models
+      5. All 8 strategies work within constrained search space
+
+  lambda_vs_direct_mapping:
+    question: "When to use lambda mappings vs direct mappings?"
+
+    direct_mapping:
+      when: "Source column maps directly to Odoo field"
+      example: "'email' column → res.partner.email"
+      mapping_type: "direct"
+
+    lambda_mapping:
+      when: "Need to transform/combine multiple columns"
+      examples:
+        - "FirstName + LastName → res.partner.name"
+        - "Street + City + Zip → res.partner.street (formatted)"
+        - "Quantity * Price → sale.order.line.price_subtotal"
+      mapping_type: "lambda"
+      fields:
+        lambda_function: "Python lambda expression as string"
+        lambda_dependencies: "List of source columns needed"
+
+#
+# INTEGRATION POINTS
+#
+integration_points:
+  odoo_dictionary:
+    location: "../odoo-dictionary/"
+    format: "5 Excel files"
+    files:
+      - "Models (ir.model) (1).xlsx: 520 Odoo models"
+      - "Fields (ir.model.fields).xlsx: 9,947 fields"
+      - "Fields Selection (ir.model.fields.selection).xlsx: 2,144 selection options"
+      - "Model Constraint (ir.model.constraint).xlsx: 2,122 constraints"
+      - "Relation Model (ir.model.relation).xlsx: 169 relations"
+    loaded_by: "field_mapper.core.knowledge_base.OdooKnowledgeBase"
+    indexed: "Builds tries for fast field name lookups"
+
+  polars_dataframes:
+    purpose: "Primary data processing library"
+    why: "401,330 rows/second (10x faster than pandas)"
+    usage:
+      - "Read Excel/CSV files"
+      - "Column profiling"
+      - "Data transformations"
+      - "Lambda execution"
+    note: "Pandas only used in legacy code (being removed)"
+
+  celery_redis:
+    purpose: "Async task queue for long-running operations"
+    tasks:
+      - "profile_dataset: Column profiling (can take minutes for large files)"
+      - "execute_import: Odoo import (can take hours)"
+    why_async: "Don't block HTTP requests for long operations"
+
+  fastapi_sqlalchemy:
+    purpose: "API layer + ORM"
+    pattern: "Route → Service → Database"
+    session_management: "Dependency injection via get_db()"
+
+#
+# PERFORMANCE METRICS
+#
+performance:
+  polars_profiling: "401,330 rows/second"
+  module_filtering_impact: "10x field reduction (9,947 → ~500)"
+  confidence_boost_with_modules: "+15-30% average confidence"
+  matching_strategies_run_time: "~100ms per column (all 8 strategies)"
+  typical_dataset_mapping_time: "5-30 seconds for 100 columns"
+
+#
+# COMMON PATTERNS
+#
+patterns:
+  service_layer_pattern:
+    description: "All business logic in services, API layer is thin"
+    example: |
+      # API layer (thin)
+      @router.post("/datasets/{id}/mappings/generate")
+      async def generate_mappings(dataset_id: int, db: Session = Depends(get_db)):
+          service = MappingService(db)
+          return await service.generate_mappings_v2(dataset_id)
+
+      # Service layer (business logic)
+      class MappingService:
+          async def generate_mappings_v2(self, dataset_id: int):
+              # Complex business logic here...
+
+  two_phase_import_pattern:
+    description: "Import parents first, then children using KeyMap"
+    example: |
+      Phase A: Import res.partner records
+        → Store KeyMap(source_value='Acme Corp', odoo_id=42)
+
+      Phase B: Import project.project records
+        → Lookup 'Acme Corp' in KeyMap → partner_id=42
+        → Import project with partner_id=42
+
+  celery_async_pattern:
+    description: "Long operations run as Celery tasks"
+    example: |
+      # Trigger task
+      task = profile_dataset.delay(dataset_id)
+
+      # Return task ID to frontend
+      return {"task_id": task.id, "status": "processing"}
+
+      # Frontend polls for completion
+      GET /api/v1/tasks/{task_id}/status

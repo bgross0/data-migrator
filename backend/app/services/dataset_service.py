@@ -18,8 +18,20 @@ class DatasetService:
     async def create_from_upload(self, file: UploadFile, name: str = None) -> Tuple[Dataset, str]:
         """Create a dataset from an uploaded file and return operation ID for tracking."""
 
-        # Create operation tracker
-        file_size_mb = f"{file.size / 1024 / 1024:.2f} MB" if file.size else "unknown size"
+        # Determine file size if possible (UploadFile doesn't expose size attribute reliably)
+        file_size_bytes = None
+        try:
+            if file.file:
+                current_pos = file.file.tell()
+                file.file.seek(0, os.SEEK_END)
+                file_size_bytes = file.file.tell()
+                file.file.seek(current_pos, os.SEEK_SET)
+        except Exception:
+            file_size_bytes = None
+
+        file_size_mb = f"{file_size_bytes / 1024 / 1024:.2f} MB" if file_size_bytes else "unknown size"
+
+        dataset = None
         tracker = OperationTracker.create(
             operation_type="upload",
             steps=[
@@ -132,9 +144,10 @@ class DatasetService:
             # Mark operation as error
             tracker.error(str(e), "profile" if "profile" in str(e).lower() else None)
 
-            # Mark dataset as failed
-            dataset.profiling_status = "failed"
-            self.db.commit()
+            # Mark dataset as failed if it was created
+            if dataset is not None:
+                dataset.profiling_status = "failed"
+                self.db.commit()
             print(f"Upload error: {e}")
             raise
         finally:

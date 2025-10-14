@@ -3,11 +3,13 @@ Column Profiler for analyzing spreadsheet columns.
 
 This module provides functionality to profile columns from uploaded spreadsheets,
 detecting data types, patterns, statistical properties, and more.
+
+Now using Polars for better performance.
 """
 import re
 from typing import List, Dict, Any, Optional
 from collections import Counter
-import pandas as pd
+import polars as pl
 from datetime import datetime
 
 from ..core.data_structures import ColumnProfile
@@ -67,7 +69,7 @@ class ColumnProfiler:
     def profile_column(
         self,
         column_name: str,
-        data: pd.Series,
+        data: pl.Series,
         sheet_name: str = "Sheet1"
     ) -> ColumnProfile:
         """
@@ -75,7 +77,7 @@ class ColumnProfiler:
 
         Args:
             column_name: Name of the column
-            data: Pandas Series containing the column data
+            data: Polars Series containing the column data
             sheet_name: Name of the sheet this column belongs to
 
         Returns:
@@ -84,7 +86,7 @@ class ColumnProfiler:
         logger.info(f"Profiling column: {column_name} (sheet: {sheet_name})")
 
         # Remove null values for analysis
-        clean_data = data.dropna()
+        clean_data = data.drop_nulls()
         total_rows = len(data)
         non_null_rows = len(clean_data)
 
@@ -107,7 +109,7 @@ class ColumnProfiler:
 
         # Sample the data if it's too large
         if non_null_rows > self.sample_size:
-            sample_data = clean_data.sample(n=self.sample_size, random_state=42)
+            sample_data = clean_data.sample(n=self.sample_size, seed=42)
         else:
             sample_data = clean_data
 
@@ -123,15 +125,15 @@ class ColumnProfiler:
         )
 
         # Calculate uniqueness ratio
-        unique_count = len(clean_data.unique())
+        unique_count = clean_data.n_unique()
         uniqueness_ratio = float(unique_count) / non_null_rows
 
         # Get value frequencies (top 100 most common)
-        value_freq = Counter(clean_data.head(1000))
+        value_freq = Counter(clean_data.head(1000).to_list())
         top_frequencies = dict(value_freq.most_common(100))
 
         # Get sample values (up to 10 unique values)
-        sample_values = list(clean_data.unique()[:10])
+        sample_values = clean_data.unique().head(10).to_list()
 
         # Calculate null percentage
         null_percentage = ((total_rows - non_null_rows) / total_rows * 100) if total_rows > 0 else 0
@@ -161,14 +163,14 @@ class ColumnProfiler:
 
     def profile_dataframe(
         self,
-        df: pd.DataFrame,
+        df: pl.DataFrame,
         sheet_name: str = "Sheet1"
     ) -> List[ColumnProfile]:
         """
         Profile all columns in a DataFrame.
 
         Args:
-            df: Pandas DataFrame to profile
+            df: Polars DataFrame to profile
             sheet_name: Name of the sheet
 
         Returns:
@@ -191,53 +193,53 @@ class ColumnProfiler:
     # Data Type Detection
     # ===========================
 
-    def _detect_data_type(self, data: pd.Series) -> str:
+    def _detect_data_type(self, data: pl.Series) -> str:
         """
         Detect the primary data type of a column.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
 
         Returns:
             Data type as string: "integer", "float", "boolean", "date", "string"
         """
-        # Check pandas dtype first
+        # Check Polars dtype
         dtype = data.dtype
 
-        if pd.api.types.is_integer_dtype(dtype):
+        if dtype in [pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64]:
             return "integer"
-        elif pd.api.types.is_float_dtype(dtype):
+        elif dtype in [pl.Float32, pl.Float64]:
             return "float"
-        elif pd.api.types.is_bool_dtype(dtype):
+        elif dtype == pl.Boolean:
             return "boolean"
-        elif pd.api.types.is_datetime64_any_dtype(dtype):
+        elif dtype in [pl.Date, pl.Datetime]:
             return "date"
+        elif dtype == pl.Utf8:
+            # Analyze string content
+            unique_vals = set(str(v).lower() for v in data.unique().to_list() if v is not None)
 
-        # For object dtype, analyze the content
-        if pd.api.types.is_object_dtype(dtype):
             # Try to detect boolean
-            unique_vals = set(str(v).lower() for v in data.unique() if pd.notna(v))
             if unique_vals.issubset({"true", "false", "yes", "no", "1", "0", "t", "f"}):
                 return "boolean"
 
             # Try to parse as numeric
             try:
-                pd.to_numeric(data, errors="raise")
+                data.cast(pl.Float64, strict=True)
                 # Check if all values are integers
-                if all(float(v).is_integer() for v in data if pd.notna(v)):
+                numeric = data.cast(pl.Float64, strict=False).drop_nulls()
+                if all(v == int(v) for v in numeric.to_list()):
                     return "integer"
                 return "float"
-            except (ValueError, TypeError):
+            except:
                 pass
 
             # Try to parse as date
             try:
-                pd.to_datetime(data, errors="raise")
+                data.str.to_datetime()
                 return "date"
-            except (ValueError, TypeError):
+            except:
                 pass
 
-            # Default to string
             return "string"
 
         # Fallback
@@ -247,12 +249,12 @@ class ColumnProfiler:
     # Pattern Detection
     # ===========================
 
-    def _detect_patterns(self, data: pd.Series) -> Dict[str, float]:
+    def _detect_patterns(self, data: pl.Series) -> Dict[str, float]:
         """
         Detect patterns in the column data.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
 
         Returns:
             Dictionary mapping pattern names to match ratios (0.0 to 1.0)
@@ -260,11 +262,11 @@ class ColumnProfiler:
         patterns_found: Dict[str, float] = {}
 
         # Convert all values to strings for pattern matching
-        str_data = data.astype(str)
+        str_data = data.cast(pl.Utf8)
 
         # Test each pattern
         for pattern_name, pattern_re in self.PATTERNS.items():
-            matches = str_data.apply(lambda x: bool(pattern_re.match(x)))
+            matches = str_data.map_elements(lambda x: bool(pattern_re.match(x)) if x else False, return_dtype=pl.Boolean)
             match_ratio = float(matches.sum()) / len(data)
 
             # Only include patterns with at least 20% match rate
@@ -283,79 +285,79 @@ class ColumnProfiler:
 
         return patterns_found
 
-    def _detect_email_pattern(self, data: pd.Series) -> float:
+    def _detect_email_pattern(self, data: pl.Series) -> float:
         """
         Detect email pattern in column data.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
 
         Returns:
             Ratio of values matching email pattern (0.0 to 1.0)
         """
-        str_data = data.astype(str)
-        matches = str_data.apply(lambda x: bool(self.PATTERNS["email"].match(x)))
+        str_data = data.cast(pl.Utf8)
+        matches = str_data.map_elements(lambda x: bool(self.PATTERNS["email"].match(x)) if x else False, return_dtype=pl.Boolean)
         return float(matches.sum()) / len(data)
 
-    def _detect_phone_pattern(self, data: pd.Series) -> float:
+    def _detect_phone_pattern(self, data: pl.Series) -> float:
         """
         Detect phone number pattern in column data.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
 
         Returns:
             Ratio of values matching phone pattern (0.0 to 1.0)
         """
-        str_data = data.astype(str)
-        matches = str_data.apply(lambda x: bool(self.PATTERNS["phone"].match(x)))
+        str_data = data.cast(pl.Utf8)
+        matches = str_data.map_elements(lambda x: bool(self.PATTERNS["phone"].match(x)) if x else False, return_dtype=pl.Boolean)
         return float(matches.sum()) / len(data)
 
-    def _detect_url_pattern(self, data: pd.Series) -> float:
+    def _detect_url_pattern(self, data: pl.Series) -> float:
         """
         Detect URL pattern in column data.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
 
         Returns:
             Ratio of values matching URL pattern (0.0 to 1.0)
         """
-        str_data = data.astype(str)
-        matches = str_data.apply(lambda x: bool(self.PATTERNS["url"].match(x)))
+        str_data = data.cast(pl.Utf8)
+        matches = str_data.map_elements(lambda x: bool(self.PATTERNS["url"].match(x)) if x else False, return_dtype=pl.Boolean)
         return float(matches.sum()) / len(data)
 
-    def _detect_currency_pattern(self, data: pd.Series) -> float:
+    def _detect_currency_pattern(self, data: pl.Series) -> float:
         """
         Detect currency pattern in column data.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
 
         Returns:
             Ratio of values matching currency pattern (0.0 to 1.0)
         """
-        str_data = data.astype(str)
-        matches = str_data.apply(lambda x: bool(self.PATTERNS["currency"].match(x)))
+        str_data = data.cast(pl.Utf8)
+        matches = str_data.map_elements(lambda x: bool(self.PATTERNS["currency"].match(x)) if x else False, return_dtype=pl.Boolean)
         return float(matches.sum()) / len(data)
 
-    def _detect_date_pattern(self, data: pd.Series) -> float:
+    def _detect_date_pattern(self, data: pl.Series) -> float:
         """
         Detect date pattern in column data.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
 
         Returns:
             Ratio of values matching any date pattern (0.0 to 1.0)
         """
-        str_data = data.astype(str)
+        str_data = data.cast(pl.Utf8)
 
         # Try all date patterns
         total_matches = 0
         for pattern_name in ["date_iso", "date_us", "date_eu"]:
             pattern = self.PATTERNS[pattern_name]
-            matches = str_data.apply(lambda x: bool(pattern.match(x)))
+            matches = str_data.map_elements(lambda x: bool(pattern.match(x)) if x else False, return_dtype=pl.Boolean)
             total_matches = max(total_matches, float(matches.sum()))
 
         return total_matches / len(data)
@@ -366,14 +368,14 @@ class ColumnProfiler:
 
     def _calculate_statistics(
         self,
-        data: pd.Series,
+        data: pl.Series,
         data_type: str
     ) -> tuple[Optional[Any], Optional[Any], Optional[float], Optional[float]]:
         """
         Calculate statistical properties for numeric columns.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
             data_type: Detected data type
 
         Returns:
@@ -383,7 +385,7 @@ class ColumnProfiler:
             return None, None, None, None
 
         try:
-            numeric_data = pd.to_numeric(data, errors="coerce").dropna()
+            numeric_data = data.cast(pl.Float64, strict=False).drop_nulls()
 
             if len(numeric_data) == 0:
                 return None, None, None, None
@@ -399,40 +401,40 @@ class ColumnProfiler:
             logger.warning(f"Error calculating statistics: {e}")
             return None, None, None, None
 
-    def _calculate_uniqueness_ratio(self, data: pd.Series) -> float:
+    def _calculate_uniqueness_ratio(self, data: pl.Series) -> float:
         """
         Calculate the uniqueness ratio of a column.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
 
         Returns:
             Ratio of unique values to total values (0.0 to 1.0)
         """
-        clean_data = data.dropna()
+        clean_data = data.drop_nulls()
         if len(clean_data) == 0:
             return 0.0
 
-        return len(clean_data.unique()) / len(clean_data)
+        return clean_data.n_unique() / len(clean_data)
 
     def _analyze_value_frequencies(
         self,
-        data: pd.Series,
+        data: pl.Series,
         top_n: int = 100
     ) -> Dict[Any, int]:
         """
         Analyze value frequency distribution.
 
         Args:
-            data: Pandas Series to analyze
+            data: Polars Series to analyze
             top_n: Number of top values to return
 
         Returns:
             Dictionary mapping values to their frequencies
         """
-        clean_data = data.dropna()
-        value_counts = clean_data.value_counts()
-        return dict(value_counts.head(top_n))
+        clean_data = data.drop_nulls()
+        value_counts = clean_data.value_counts().head(top_n)
+        return {row[0]: row[1] for row in value_counts.iter_rows()}
 
     # ===========================
     # Utility Methods

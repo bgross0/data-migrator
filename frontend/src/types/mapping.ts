@@ -21,6 +21,7 @@ export interface CustomFieldDefinition {
   technical_name: string
   field_label: string
   field_type: string
+  target_model?: string
   required: boolean
   size?: number
   help_text?: string
@@ -41,6 +42,7 @@ export interface Mapping {
   rationale: string | null
   suggestions: Suggestion[]
   custom_field_definition?: CustomFieldDefinition
+  lambda_function?: string
 }
 
 export interface FieldTypeSuggestion {
@@ -64,4 +66,15 @@ export interface ColumnProfile {
 export interface Dataset {
   id: number
   name: string
+  source_file_id: number
+  created_at: string
+  sheets: Sheet[]
+}
+
+export interface Sheet {
+  id: number
+  dataset_id: number
+  name: string
+  n_rows: number
+  n_cols: number
 }

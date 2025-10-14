@@ -12,11 +12,13 @@ This service transforms interactive cleanup work into deterministic file-based c
 import io
 import re
 import yaml
-import pandas as pd
 import zipfile
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict
+
+import pandas as pd
+import polars as pl
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Dataset, Sheet, Mapping, Transform, ColumnProfile, Relationship
@@ -72,17 +74,18 @@ class OdooMigrateExportService:
 
     def _load_dataset_with_relations(self, dataset_id: int) -> Optional[Dataset]:
         """Load dataset with all necessary relationships."""
-        return self.db.query(Dataset)\
+        dataset = self.db.query(Dataset)\
             .options(
                 joinedload(Dataset.source_file),
                 joinedload(Dataset.sheets)
                     .joinedload(Sheet.column_profiles),
-                joinedload(Dataset.sheets)
-                    .joinedload(Sheet.mappings)
+                joinedload(Dataset.mappings)
                     .joinedload(Mapping.transforms),
             )\
             .filter(Dataset.id == dataset_id)\
             .first()
+                    
+        return dataset
 
     def _validate_dataset_for_export(self, dataset: Dataset) -> List[str]:
         """
@@ -207,21 +210,14 @@ class OdooMigrateExportService:
         dataset: Dataset,
         sheet: Sheet,
         mappings: List[Mapping]
-    ) -> pd.DataFrame:
+    ) -> pl.DataFrame:
         """
         Read source file and apply all configured transforms.
 
         Returns cleaned dataframe with transforms applied.
         """
-        # Read source file
         file_path = Path(dataset.source_file.path)
-
-        if file_path.suffix.lower() in ['.xlsx', '.xls']:
-            df = pd.read_excel(file_path, sheet_name=sheet.name)
-        elif file_path.suffix.lower() == '.csv':
-            df = pd.read_csv(file_path)
-        else:
-            raise ValueError(f"Unsupported file format: {file_path.suffix}")
+        df = self._read_source_sheet(file_path, sheet.name)
 
         # Apply transforms to each mapped column
         for mapping in mappings:
@@ -238,7 +234,8 @@ class OdooMigrateExportService:
 
             # Apply transform chain to each value in column
             cleaned_values = []
-            for value in df[source_col]:
+            column_values = df.get_column(source_col)
+            for value in column_values.to_list():
                 cleaned_value = value
                 for transform in transforms:
                     cleaned_value = self.transform_service.apply_transform(
@@ -255,11 +252,43 @@ class OdooMigrateExportService:
                 cleaned_values.append(cleaned_value)
 
             # Replace column with cleaned values
-            df[source_col] = cleaned_values
+            df = df.with_columns(pl.Series(source_col, cleaned_values))
 
         # Keep only mapped columns
         mapped_columns = [m.header_name for m in mappings if m.header_name in df.columns]
-        return df[mapped_columns]
+        return df.select(mapped_columns) if mapped_columns else df.select([])
+
+    def _read_source_sheet(self, file_path: Path, sheet_name: str) -> pl.DataFrame:
+        """
+        Read a specific sheet or CSV source file into a Polars DataFrame.
+
+        Falls back to pandas for legacy Excel formats or edge cases.
+        """
+        suffix = file_path.suffix.lower()
+
+        if suffix in ['.csv', '.cleaned.csv']:
+            return pl.read_csv(file_path)
+
+        if suffix == '.xlsx':
+            try:
+                return pl.read_excel(file_path, sheet_name=sheet_name)
+            except Exception:
+                return self._read_excel_with_pandas(file_path, sheet_name)
+
+        if suffix == '.xls':
+            return self._read_excel_with_pandas(file_path, sheet_name)
+
+        raise ValueError(f"Unsupported file format: {file_path.suffix}")
+
+    @staticmethod
+    def _read_excel_with_pandas(file_path: Path, sheet_name: str) -> pl.DataFrame:
+        """
+        Helper to load Excel files with pandas and convert to Polars.
+        """
+        import pandas as pd  # Local import to keep pandas optional
+
+        pandas_df = pd.read_excel(file_path, sheet_name=sheet_name)
+        return pl.from_pandas(pandas_df)
 
     def _generate_yaml_mapping(
         self,

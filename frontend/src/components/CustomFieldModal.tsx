@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Mapping, FieldTypeSuggestion, SelectionOption, CustomFieldDefinition } from '@/types/mapping'
 
 interface Props {
@@ -14,81 +14,162 @@ const FIELD_TYPES = [
   'Text', 'Html', 'Selection', 'Many2one', 'Monetary'
 ]
 
-const COMMON_MODELS = [
+const BASE_COMMON_MODELS = [
   'res.partner', 'res.users', 'product.product', 'product.template',
   'sale.order', 'purchase.order', 'account.move', 'project.project'
 ]
 
 export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onClose, onSave }: Props) {
   const [suggestion, setSuggestion] = useState<FieldTypeSuggestion | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [suggestionLoading, setSuggestionLoading] = useState(false)
+  const [suggestionError, setSuggestionError] = useState<string | null>(null)
 
   const [technicalName, setTechnicalName] = useState('')
   const [fieldLabel, setFieldLabel] = useState('')
   const [fieldType, setFieldType] = useState('Char')
   const [required, setRequired] = useState(false)
-  const [size, setSize] = useState(255)
+  const [size, setSize] = useState<number>(255)
   const [helpText, setHelpText] = useState('')
   const [selectionOptions, setSelectionOptions] = useState<SelectionOption[]>([])
   const [relatedModel, setRelatedModel] = useState('')
+  const [validationError, setValidationError] = useState<string | null>(null)
+
+  const availableModels = useMemo(() => {
+    const models = new Set<string>(BASE_COMMON_MODELS)
+    if (mapping.target_model) {
+      models.add(mapping.target_model)
+    }
+    return Array.from(models).sort()
+  }, [mapping.target_model])
+
+  const resetForm = useCallback(() => {
+    const autoTechName = generateDefaultTechnicalName(mapping.header_name)
+    setTechnicalName(autoTechName)
+    setFieldLabel(mapping.header_name)
+    setFieldType('Char')
+    setRequired(false)
+    setSize(255)
+    setHelpText('')
+    setSelectionOptions([])
+    setRelatedModel(mapping.target_model || '')
+    setValidationError(null)
+    setSuggestion(null)
+    setSuggestionError(null)
+  }, [mapping.header_name, mapping.target_model])
+
+  const applySuggestion = useCallback((data: FieldTypeSuggestion) => {
+    setFieldType(data.field_type || 'Char')
+    setRequired(Boolean(data.required))
+    if (data.field_type === 'Char' && data.suggested_size) {
+      setSize(data.suggested_size)
+    }
+    if (data.field_type === 'Selection' && data.selection_options) {
+      setSelectionOptions(
+        data.selection_options.map(opt => ({
+          value: opt.value,
+          label: opt.label,
+        }))
+      )
+    }
+  }, [])
+
+  const fetchSuggestion = useCallback(async () => {
+    if (!columnProfileId) {
+      return
+    }
+
+    try {
+      setSuggestionLoading(true)
+      setSuggestionError(null)
+      const response = await fetch(
+        `/api/v1/mappings/${mapping.id}/suggest-field-type?column_profile_id=${columnProfileId}`
+      )
+      if (!response.ok) {
+        const detail = await safeExtractDetail(response)
+        throw new Error(detail || 'Failed to fetch field type suggestion')
+      }
+      const data: FieldTypeSuggestion = await response.json()
+      setSuggestion(data)
+      applySuggestion(data)
+    } catch (error) {
+      console.error('Failed to fetch suggestion:', error)
+      setSuggestionError(extractErrorMessage(error, 'Unable to load field type suggestion'))
+    } finally {
+      setSuggestionLoading(false)
+    }
+  }, [applySuggestion, columnProfileId, mapping.id])
 
   useEffect(() => {
     if (isOpen) {
-      // Auto-generate technical name from header
-      const autoTechName = `x_bt_${mapping.header_name.toLowerCase().replace(/[^\w]+/g, '_')}`
-      setTechnicalName(autoTechName)
-      setFieldLabel(mapping.header_name)
-
-      // Fetch suggestion if profile ID provided
+      resetForm()
       if (columnProfileId) {
         fetchSuggestion()
       }
     }
-  }, [isOpen, mapping, columnProfileId])
+  }, [isOpen, resetForm, fetchSuggestion, columnProfileId])
 
-  const fetchSuggestion = async () => {
-    if (!columnProfileId) return
-
-    setLoading(true)
-    try {
-      const response = await fetch(
-        `/api/v1/mappings/${mapping.id}/suggest-field-type?column_profile_id=${columnProfileId}`
-      )
-      const data: FieldTypeSuggestion = await response.json()
-      setSuggestion(data)
-
-      // Apply suggestion
-      setFieldType(data.field_type)
-      setRequired(data.required)
-      if (data.suggested_size) setSize(data.suggested_size)
-      if (data.selection_options) {
-        setSelectionOptions(data.selection_options.map(opt => ({
-          value: opt.value,
-          label: opt.label
-        })))
-      }
-    } catch (error) {
-      console.error('Failed to fetch suggestion:', error)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (isOpen && fieldType === 'Selection' && selectionOptions.length === 0) {
+      setSelectionOptions([{ value: '', label: '' }])
     }
-  }
+  }, [fieldType, isOpen, selectionOptions.length])
 
   const handleSave = () => {
+    setValidationError(null)
+
+    const sanitizedName = ensureTechnicalName(technicalName)
+    if (!sanitizedName) {
+      setValidationError('Technical name is required (must begin with x_).')
+      return
+    }
+
+    const trimmedLabel = fieldLabel.trim()
+    if (!trimmedLabel) {
+      setValidationError('Field label is required.')
+      return
+    }
+
+    if (fieldType === 'Char') {
+      if (!Number.isFinite(size) || size <= 0) {
+        setValidationError('Max size must be a positive number.')
+        return
+      }
+    }
+
+    let cleanedSelectionOptions: SelectionOption[] | undefined
+    if (fieldType === 'Selection') {
+      cleanedSelectionOptions = selectionOptions
+        .map(opt => ({
+          value: opt.value.trim(),
+          label: opt.label.trim(),
+        }))
+        .filter(opt => opt.value && opt.label)
+
+      if (!cleanedSelectionOptions.length) {
+        setValidationError('Add at least one selection option with both value and label.')
+        return
+      }
+    }
+
+    if (fieldType === 'Many2one' && !relatedModel) {
+      setValidationError('Select a related model for Many2one fields.')
+      return
+    }
+
     const customFieldDef: CustomFieldDefinition = {
-      technical_name: technicalName,
-      field_label: fieldLabel,
+      technical_name: sanitizedName,
+      field_label: trimmedLabel,
       field_type: fieldType,
       required,
-      help_text: helpText || undefined,
+      help_text: helpText.trim() || undefined,
     }
 
     if (fieldType === 'Char') {
       customFieldDef.size = size
     }
 
-    if (fieldType === 'Selection') {
-      customFieldDef.selection_options = selectionOptions
+    if (cleanedSelectionOptions && cleanedSelectionOptions.length > 0) {
+      customFieldDef.selection_options = cleanedSelectionOptions
     }
 
     if (fieldType === 'Many2one') {
@@ -100,17 +181,33 @@ export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onC
   }
 
   const addSelectionOption = () => {
-    setSelectionOptions([...selectionOptions, { value: '', label: '' }])
+    setSelectionOptions(prev => [...prev, { value: '', label: '' }])
   }
 
   const updateSelectionOption = (index: number, field: 'value' | 'label', value: string) => {
-    const updated = [...selectionOptions]
-    updated[index][field] = value
-    setSelectionOptions(updated)
+    setSelectionOptions(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+    setValidationError(null)
   }
 
   const removeSelectionOption = (index: number) => {
-    setSelectionOptions(selectionOptions.filter((_, i) => i !== index))
+    setSelectionOptions(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleFieldTypeChange = (value: string) => {
+    setFieldType(value)
+    setValidationError(null)
+
+    if (value !== 'Selection') {
+      setSelectionOptions([])
+    }
+
+    if (value !== 'Many2one') {
+      setRelatedModel('')
+    }
   }
 
   if (!isOpen) return null
@@ -128,12 +225,32 @@ export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onC
             <p className="text-sm text-gray-600">
               <strong>Column:</strong> {mapping.header_name}
             </p>
+            {suggestionLoading && (
+              <p className="text-sm text-gray-500 mt-1">Analyzing column profile...</p>
+            )}
             {suggestion && (
               <p className="text-sm text-green-600 mt-1">
                 <strong>💡 Suggestion:</strong> {suggestion.rationale}
               </p>
             )}
+            {suggestionError && (
+              <div className="mt-2 flex flex-col md:flex-row md:items-center md:justify-between gap-3 border border-yellow-300 bg-yellow-50 text-yellow-800 rounded px-3 py-2 text-sm">
+                <span>{suggestionError}</span>
+                <button
+                  onClick={fetchSuggestion}
+                  className="px-3 py-1 text-sm border border-yellow-400 rounded hover:bg-yellow-100"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
           </div>
+
+          {validationError && (
+            <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+              {validationError}
+            </div>
+          )}
 
           <div className="space-y-4">
             {/* Technical Name */}
@@ -144,7 +261,10 @@ export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onC
               <input
                 type="text"
                 value={technicalName}
-                onChange={(e) => setTechnicalName(e.target.value)}
+                onChange={(e) => {
+                  setTechnicalName(e.target.value)
+                  setValidationError(null)
+                }}
                 className="w-full border border-gray-300 rounded px-3 py-2"
                 placeholder="x_bt_field_name"
               />
@@ -159,7 +279,10 @@ export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onC
               <input
                 type="text"
                 value={fieldLabel}
-                onChange={(e) => setFieldLabel(e.target.value)}
+                onChange={(e) => {
+                  setFieldLabel(e.target.value)
+                  setValidationError(null)
+                }}
                 className="w-full border border-gray-300 rounded px-3 py-2"
                 placeholder="Field Label"
               />
@@ -172,7 +295,7 @@ export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onC
               </label>
               <select
                 value={fieldType}
-                onChange={(e) => setFieldType(e.target.value)}
+                onChange={(e) => handleFieldTypeChange(e.target.value)}
                 className="w-full border border-gray-300 rounded px-3 py-2"
               >
                 {FIELD_TYPES.map(type => (
@@ -190,10 +313,14 @@ export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onC
                 <input
                   type="number"
                   value={size}
-                  onChange={(e) => setSize(Number(e.target.value))}
+                  min={1}
+                  max={500}
+                  onChange={(e) => {
+                    const value = Number(e.target.value)
+                    setSize(value)
+                    setValidationError(null)
+                  }}
                   className="w-full border border-gray-300 rounded px-3 py-2"
-                  min="1"
-                  max="500"
                 />
               </div>
             )}
@@ -247,11 +374,14 @@ export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onC
                 </label>
                 <select
                   value={relatedModel}
-                  onChange={(e) => setRelatedModel(e.target.value)}
+                  onChange={(e) => {
+                    setRelatedModel(e.target.value)
+                    setValidationError(null)
+                  }}
                   className="w-full border border-gray-300 rounded px-3 py-2"
                 >
                   <option value="">Select model...</option>
-                  {COMMON_MODELS.map(model => (
+                  {availableModels.map(model => (
                     <option key={model} value={model}>{model}</option>
                   ))}
                 </select>
@@ -306,4 +436,47 @@ export default function CustomFieldModal({ mapping, columnProfileId, isOpen, onC
       </div>
     </div>
   )
+}
+
+const generateDefaultTechnicalName = (header: string) => {
+  const base = header.toLowerCase().replace(/[^\w]+/g, '_')
+  return ensureTechnicalName(`x_bt_${base}`)
+}
+
+const ensureTechnicalName = (value: string) => {
+  const cleaned = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+
+  if (!cleaned) {
+    return ''
+  }
+
+  let withPrefix = cleaned.startsWith('x_') ? cleaned : `x_${cleaned}`
+  if (!withPrefix.startsWith('x_')) {
+    withPrefix = `x_${withPrefix}`
+  }
+  return withPrefix.slice(0, 64)
+}
+
+const extractErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
+}
+
+const safeExtractDetail = async (response: Response) => {
+  try {
+    const data = await response.json()
+    if (data?.detail && typeof data.detail === 'string') {
+      return data.detail
+    }
+  } catch (_error) {
+    // ignore - we only care about graceful fallback
+  }
+  return null
 }

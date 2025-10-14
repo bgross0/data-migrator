@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Plus, Trash2, Code, PlayCircle } from 'lucide-react'
+// import { X, Plus, Trash2, Code, PlayCircle } from 'lucide-react'
 
 interface LambdaMappingModalProps {
   isOpen: boolean
@@ -11,8 +11,8 @@ interface LambdaMappingModalProps {
 
 export interface LambdaMappingData {
   header_name: string
-  target_field: string
-  target_model: string
+  target_field: string | null
+  target_model: string | null
   lambda_function: string
   mapping_type: 'lambda'
   description?: string
@@ -102,17 +102,6 @@ export default function LambdaMappingModal({
     setTestResult('Testing lambda function...')
 
     try {
-      // Create a simple test context
-      const testData = {
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'john@example.com',
-        phone: '(555) 123-4567',
-        salary: 50000,
-        department: 'Engineering',
-        birthdate: '1990-01-15'
-      }
-
       // In a real implementation, this would call the backend to test the lambda
       // For now, we'll simulate a basic test
       setTimeout(() => {
@@ -132,13 +121,13 @@ export default function LambdaMappingModal({
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-2">
-            <Code className="w-5 h-5 text-blue-600" />
+            <span className="text-blue-600">⚡</span>
             <h2 className="text-xl font-semibold">
               {initialData ? 'Edit Lambda Mapping' : 'Create Lambda Mapping'}
             </h2>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
+            <span className="text-xl">✕</span>
           </button>
         </div>
 
@@ -149,7 +138,7 @@ export default function LambdaMappingModal({
               <label className="block text-sm font-medium mb-2">Target Field Name</label>
               <input
                 type="text"
-                value={formData.target_field}
+                value={formData.target_field || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, target_field: e.target.value }))}
                 className="w-full border rounded px-3 py-2"
                 placeholder="e.g., full_name, email_domain"
@@ -158,7 +147,7 @@ export default function LambdaMappingModal({
             <div>
               <label className="block text-sm font-medium mb-2">Target Model</label>
               <select
-                value={formData.target_model}
+                value={formData.target_model || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, target_model: e.target.value }))}
                 className="w-full border rounded px-3 py-2"
               >
@@ -222,7 +211,7 @@ export default function LambdaMappingModal({
                 disabled={isTesting || !formData.lambda_function}
                 className="absolute top-2 right-2 px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 disabled:opacity-50 flex items-center gap-1"
               >
-                <PlayCircle className="w-3 h-3" />
+                <span>▶</span>
                 {isTesting ? 'Testing...' : 'Test'}
               </button>
             </div>
@@ -252,11 +241,11 @@ export default function LambdaMappingModal({
           <div className="bg-blue-50 rounded p-4">
             <h4 className="font-medium text-blue-900 mb-2">Lambda Function Help</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Use <code className="bg-blue-100 px-1 rounded">row["column_name"]</code> to access column values</li>
-              <li>• Use <code className="bg-blue-100 px-1 rounded">row.get("column_name")</code> for safe access (returns None if missing)</li>
-              <li>• Combine fields: <code className="bg-blue-100 px-1 rounded">f"{row['first']} {row['last']}"</code></li>
+              <li>• Use <code className="bg-blue-100 px-1 rounded">{`row["column_name"]`}</code> to access column values</li>
+              <li>• Use <code className="bg-blue-100 px-1 rounded">{`row.get("column_name")`}</code> for safe access (returns None if missing)</li>
+              <li>• Combine fields: <code className="bg-blue-100 px-1 rounded">{`f"row['first'] row['last']"`}</code></li>
               <li>• Conditional logic: <code className="bg-blue-100 px-1 rounded">value if condition else other_value</code></li>
-              <li>• String operations: <code className="bg-blue-100 px-1 rounded">row["email"].split("@")[1]</code></li>
+              <li>• String operations: <code className="bg-blue-100 px-1 rounded">{`row["email"].split("@")[1]`}</code></li>
             </ul>
           </div>
         </div>

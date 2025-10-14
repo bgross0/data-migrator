@@ -1,0 +1,117 @@
+
+digraph G {
+    concentrate = true;
+
+    rankdir = TB;
+    node [style=filled,fillcolor="#ffffff",fontcolor="#000000",fontname=Helvetica,fontsize=10];
+
+    field_mapper_config [fillcolor="#f91010",fontcolor="#ffffff",label="field_mapper\.\nconfig"];
+    field_mapper_config_logging_config [fillcolor="#f91010",fontcolor="#ffffff",label="field_mapper\.\nconfig\.\nlogging_config"];
+    field_mapper_config_settings [fillcolor="#cc3333",fontcolor="#ffffff",label="field_mapper\.\nconfig\.\nsettings"];
+    field_mapper_core [fillcolor="#f91010",fontcolor="#ffffff",label="field_mapper\.\ncore"];
+    field_mapper_core_data_structures [fillcolor="#f91010",fontcolor="#ffffff",label="field_mapper\.\ncore\.\ndata_structures"];
+    field_mapper_core_knowledge_base [fillcolor="#af1313",fontcolor="#ffffff",label="field_mapper\.\ncore\.\nknowledge_base"];
+    field_mapper_core_module_registry [fillcolor="#c24747",fontcolor="#ffffff",label="field_mapper\.\ncore\.\nmodule_registry"];
+    field_mapper_executor [fillcolor="#b34c4c",fontcolor="#ffffff",label="field_mapper\.\nexecutor"];
+    field_mapper_executor_mapping_executor [fillcolor="#913030",fontcolor="#ffffff",label="field_mapper\.\nexecutor\.\nmapping_executor"];
+    field_mapper_loaders [fillcolor="#c24747",fontcolor="#ffffff",label="field_mapper\.\nloaders"];
+    field_mapper_loaders_excel_loaders [fillcolor="#a13535",fontcolor="#ffffff",label="field_mapper\.\nloaders\.\nexcel_loaders"];
+    field_mapper_main [fillcolor="#6b2e2e",fontcolor="#ffffff",label="field_mapper\.\nmain"];
+    field_mapper_matching [fillcolor="#c24747",fontcolor="#ffffff",label="field_mapper\.\nmatching"];
+    field_mapper_matching_base_strategy [fillcolor="#ac2b2b",fontcolor="#ffffff",label="field_mapper\.\nmatching\.\nbase_strategy"];
+    field_mapper_matching_business_context_analyzer [fillcolor="#a83838",fontcolor="#ffffff",label="field_mapper\.\nmatching\.\nbusiness_context_analyzer"];
+    field_mapper_matching_cell_data_analyzer [fillcolor="#a83838",fontcolor="#ffffff",label="field_mapper\.\nmatching\.\ncell_data_analyzer"];
+    field_mapper_matching_compound_name_parser [fillcolor="#ce3b3b",fontcolor="#ffffff",label="field_mapper\.\nmatching\.\ncompound_name_parser"];
+    field_mapper_matching_matching_context [fillcolor="#c82323",fontcolor="#ffffff",label="field_mapper\.\nmatching\.\nmatching_context"];
+    field_mapper_matching_matching_pipeline [fillcolor="#732626",fontcolor="#ffffff",label="field_mapper\.\nmatching\.\nmatching_pipeline"];
+    field_mapper_matching_strategies [fillcolor="#932424",fontcolor="#ffffff",label="field_mapper\.\nmatching\.\nstrategies"];
+    field_mapper_profiling [fillcolor="#c24747",fontcolor="#ffffff",label="field_mapper\.\nprofiling"];
+    field_mapper_profiling_column_profiler [fillcolor="#a13535",fontcolor="#ffffff",label="field_mapper\.\nprofiling\.\ncolumn_profiler"];
+    networkx [fillcolor="#bfc040",shape="folder"];
+    pandas [fillcolor="#33cc33",shape="folder"];
+    polars [fillcolor="#26d9d9",shape="folder"];
+    pydantic_settings [fillcolor="#5353b6",fontcolor="#ffffff",shape="folder"];
+    pygtrie [fillcolor="#b653b6",fontcolor="#ffffff",shape="folder"];
+    field_mapper_config -> field_mapper_core_knowledge_base [fillcolor="#f91010",minlen="2"];
+    field_mapper_config -> field_mapper_executor_mapping_executor [fillcolor="#f91010",minlen="2"];
+    field_mapper_config -> field_mapper_loaders_excel_loaders [fillcolor="#f91010",minlen="2"];
+    field_mapper_config -> field_mapper_main [fillcolor="#f91010"];
+    field_mapper_config -> field_mapper_matching_base_strategy [fillcolor="#f91010",minlen="2"];
+    field_mapper_config -> field_mapper_matching_business_context_analyzer [fillcolor="#f91010",minlen="2"];
+    field_mapper_config -> field_mapper_matching_cell_data_analyzer [fillcolor="#f91010",minlen="2"];
+    field_mapper_config -> field_mapper_matching_matching_pipeline [fillcolor="#f91010",minlen="2"];
+    field_mapper_config -> field_mapper_matching_strategies [fillcolor="#f91010",minlen="2"];
+    field_mapper_config -> field_mapper_profiling_column_profiler [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_core_knowledge_base [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_executor_mapping_executor [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_loaders_excel_loaders [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_main [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_matching_base_strategy [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_matching_business_context_analyzer [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_matching_cell_data_analyzer [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_matching_matching_pipeline [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_matching_strategies [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_logging_config -> field_mapper_profiling_column_profiler [fillcolor="#f91010",minlen="2"];
+    field_mapper_config_settings -> field_mapper_main [fillcolor="#cc3333",minlen="2"];
+    field_mapper_config_settings -> field_mapper_matching_matching_pipeline [fillcolor="#cc3333",minlen="2"];
+    field_mapper_core -> field_mapper_executor_mapping_executor [fillcolor="#f91010",minlen="2"];
+    field_mapper_core -> field_mapper_loaders_excel_loaders [fillcolor="#f91010",minlen="2"];
+    field_mapper_core -> field_mapper_main [fillcolor="#f91010"];
+    field_mapper_core -> field_mapper_matching_base_strategy [fillcolor="#f91010",minlen="2"];
+    field_mapper_core -> field_mapper_matching_business_context_analyzer [fillcolor="#f91010",minlen="2"];
+    field_mapper_core -> field_mapper_matching_cell_data_analyzer [fillcolor="#f91010",minlen="2"];
+    field_mapper_core -> field_mapper_matching_matching_context [fillcolor="#f91010",minlen="2"];
+    field_mapper_core -> field_mapper_matching_matching_pipeline [fillcolor="#f91010",minlen="2"];
+    field_mapper_core -> field_mapper_matching_strategies [fillcolor="#f91010",minlen="2"];
+    field_mapper_core -> field_mapper_profiling_column_profiler [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_core_knowledge_base [fillcolor="#f91010",weight="2"];
+    field_mapper_core_data_structures -> field_mapper_executor_mapping_executor [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_loaders_excel_loaders [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_main [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_matching_base_strategy [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_matching_business_context_analyzer [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_matching_cell_data_analyzer [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_matching_matching_context [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_matching_matching_pipeline [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_matching_strategies [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_data_structures -> field_mapper_profiling_column_profiler [fillcolor="#f91010",minlen="2"];
+    field_mapper_core_knowledge_base -> field_mapper_executor_mapping_executor [fillcolor="#af1313",minlen="2"];
+    field_mapper_core_knowledge_base -> field_mapper_main [fillcolor="#af1313",minlen="2"];
+    field_mapper_core_knowledge_base -> field_mapper_matching_matching_context [fillcolor="#af1313",minlen="2"];
+    field_mapper_core_knowledge_base -> field_mapper_matching_matching_pipeline [fillcolor="#af1313",minlen="2"];
+    field_mapper_core_module_registry -> field_mapper_matching_matching_pipeline [fillcolor="#c24747",minlen="2"];
+    field_mapper_executor_mapping_executor -> field_mapper_executor [fillcolor="#913030",weight="2"];
+    field_mapper_loaders -> field_mapper_core_knowledge_base [fillcolor="#c24747",minlen="2"];
+    field_mapper_loaders_excel_loaders -> field_mapper_core_knowledge_base [fillcolor="#a13535",minlen="2"];
+    field_mapper_matching -> field_mapper_main [fillcolor="#c24747"];
+    field_mapper_matching_base_strategy -> field_mapper_matching_matching_pipeline [fillcolor="#ac2b2b",weight="2"];
+    field_mapper_matching_base_strategy -> field_mapper_matching_strategies [fillcolor="#ac2b2b",weight="2"];
+    field_mapper_matching_business_context_analyzer -> field_mapper_matching_matching_pipeline [fillcolor="#a83838",weight="2"];
+    field_mapper_matching_cell_data_analyzer -> field_mapper_matching_matching_pipeline [fillcolor="#a83838",weight="2"];
+    field_mapper_matching_compound_name_parser -> field_mapper_matching_matching_pipeline [fillcolor="#ce3b3b",weight="2"];
+    field_mapper_matching_compound_name_parser -> field_mapper_matching_strategies [fillcolor="#ce3b3b",weight="2"];
+    field_mapper_matching_matching_context -> field_mapper_matching_base_strategy [fillcolor="#c82323",weight="2"];
+    field_mapper_matching_matching_context -> field_mapper_matching_matching_pipeline [fillcolor="#c82323",weight="2"];
+    field_mapper_matching_matching_context -> field_mapper_matching_strategies [fillcolor="#c82323",weight="2"];
+    field_mapper_matching_matching_pipeline -> field_mapper_main [fillcolor="#732626",minlen="2"];
+    field_mapper_matching_strategies -> field_mapper_matching_matching_pipeline [fillcolor="#932424",weight="2"];
+    field_mapper_profiling -> field_mapper_main [fillcolor="#c24747"];
+    field_mapper_profiling_column_profiler -> field_mapper_main [fillcolor="#a13535",minlen="2"];
+    networkx -> field_mapper_core_knowledge_base [fillcolor="#bfc040",minlen="3"];
+    pandas -> field_mapper_executor_mapping_executor [fillcolor="#33cc33",minlen="3"];
+    pandas -> field_mapper_loaders_excel_loaders [fillcolor="#33cc33",minlen="3"];
+    polars -> field_mapper_executor_mapping_executor [fillcolor="#26d9d9",minlen="3"];
+    polars -> field_mapper_main [fillcolor="#26d9d9",minlen="2"];
+    polars -> field_mapper_profiling_column_profiler [fillcolor="#26d9d9",minlen="3"];
+    pydantic_settings -> field_mapper_config_settings [fillcolor="#5353b6",minlen="3"];
+    pygtrie -> field_mapper_core_knowledge_base [fillcolor="#b653b6",minlen="3"];
+}
+
+	ERROR: 
+               cannot find 'dot'
+
+               pydeps calls dot (from graphviz) to create svg diagrams,
+               please make sure that the dot executable is available
+               on your path.
+            
+

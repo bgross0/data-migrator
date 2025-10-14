@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { Split, Download, AlertTriangle, CheckCircle, FileSpreadsheet } from 'lucide-react'
+import StatusOverlay, { StatusStep } from './StatusOverlay'
 
 interface SheetSplitterProps {
-  datasetId: number
   sheetId: number
   onSplitComplete: (result: SplitResult) => void
 }
@@ -28,12 +27,14 @@ interface SplitResult {
   errors?: string[]
 }
 
-export default function SheetSplitter({ datasetId, sheetId, onSplitComplete }: SheetSplitterProps) {
+export default function SheetSplitter({ sheetId, onSplitComplete }: SheetSplitterProps) {
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [isSplitting, setIsSplitting] = useState(false)
   const [preview, setPreview] = useState<ModelGroup[] | null>(null)
   const [error, setError] = useState<string>('')
   const [selectedModels, setSelectedModels] = useState<string[]>([])
+  const [splittingSteps, setSplittingSteps] = useState<StatusStep[]>([])
+  const [splittingProgress, setSplittingProgress] = useState(0)
 
   const loadPreview = async () => {
     setIsPreviewing(true)
@@ -69,6 +70,12 @@ export default function SheetSplitter({ datasetId, sheetId, onSplitComplete }: S
     setIsSplitting(true)
     setError('')
 
+    const steps: StatusStep[] = [
+      { id: 'split', label: 'Splitting sheet into model-specific files...', status: 'in_progress' }
+    ]
+    setSplittingSteps(steps)
+    setSplittingProgress(5)
+
     try {
       const response = await fetch(`/api/v1/sheets/${sheetId}/split`, {
         method: 'POST',
@@ -83,48 +90,35 @@ export default function SheetSplitter({ datasetId, sheetId, onSplitComplete }: S
 
       const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.detail || 'Split failed')
+      if (!response.ok || !data.success) {
+        const message = data?.detail || data?.error || 'Split failed'
+        if (data?.errors) {
+          data.errors.forEach((err: string) => console.error('Split error:', err))
+        }
+        throw new Error(message)
       }
 
-      if (data.success) {
+      setSplittingSteps(steps.map(step => ({ ...step, status: 'complete' })))
+      setSplittingProgress(100)
+
+      setTimeout(() => {
         setPreview(null)
         setSelectedModels([])
         onSplitComplete(data)
-      } else {
-        setError(data.error || 'Split failed')
-        if (data.errors) {
-          data.errors.forEach((err: string) => console.error('Split error:', err))
-        }
-      }
+        setIsSplitting(false)
+      }, 400)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Split failed')
-    } finally {
-      setIsSplitting(false)
+      const message = error instanceof Error ? error.message : 'Split failed'
+      setError(message)
+      setSplittingSteps([
+        { id: 'split', label: 'Splitting sheet into model-specific files...', status: 'error', detail: message }
+      ])
+      setSplittingProgress(0)
+      setTimeout(() => setIsSplitting(false), 600)
     }
   }
 
-  const downloadSplitSheet = async (sheetData: any) => {
-    try {
-      const response = await fetch(`/api/v1/sheets/${sheetData.id}/download`)
-      if (!response.ok) {
-        throw new Error('Download failed')
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${sheetData.name}.csv`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Download failed:', error)
-      alert('Download failed')
-    }
-  }
+  
 
   const toggleModel = (model: string) => {
     if (selectedModels.includes(model)) {
@@ -138,7 +132,9 @@ export default function SheetSplitter({ datasetId, sheetId, onSplitComplete }: S
     <div className="bg-white rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Split className="w-5 h-5 text-blue-600" />
+          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12M8 12h12M8 17h12M3 7h.01M3 12h.01M3 17h.01" />
+          </svg>
           <h3 className="text-lg font-semibold">Sheet Splitter</h3>
         </div>
         {!preview && (
@@ -155,7 +151,9 @@ export default function SheetSplitter({ datasetId, sheetId, onSplitComplete }: S
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded flex items-start gap-2">
-          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+          <svg className="w-5 h-5 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
           <div>
             <p className="text-red-800">{error}</p>
           </div>
@@ -211,7 +209,7 @@ export default function SheetSplitter({ datasetId, sheetId, onSplitComplete }: S
                       <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
                         isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
                       }`}>
-                        {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                        {isSelected && <span className="text-white text-xs">✓</span>}
                       </div>
                     </div>
                   </div>
@@ -250,7 +248,7 @@ export default function SheetSplitter({ datasetId, sheetId, onSplitComplete }: S
       {/* Instructions */}
       {!preview && !error && (
         <div className="text-center py-8">
-          <FileSpreadsheet className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <span className="text-4xl text-gray-400 mx-auto block mb-4">📊</span>
           <h4 className="font-medium text-gray-900 mb-2">Split Multi-Model Sheet</h4>
           <p className="text-gray-600 mb-4">
             Split a sheet containing multiple Odoo models into separate files per model
@@ -266,6 +264,14 @@ export default function SheetSplitter({ datasetId, sheetId, onSplitComplete }: S
           </div>
         </div>
       )}
+
+      {/* Loading Overlay for Split Operation */}
+      <StatusOverlay
+        isOpen={isSplitting}
+        title="Splitting Sheet"
+        steps={splittingSteps}
+        progress={splittingProgress}
+      />
     </div>
   )
 }

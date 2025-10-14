@@ -3,9 +3,12 @@ Header detection rule.
 
 Finds the actual header row in a spreadsheet, skipping metadata rows.
 """
-import pandas as pd
-from typing import Optional
+from __future__ import annotations
+
 import logging
+from typing import Optional, Sequence
+
+import polars as pl
 
 from ..base import CleaningRule, CleaningResult, ChangeType
 from ..config import CleaningConfig
@@ -38,7 +41,7 @@ class HeaderDetectionRule(CleaningRule):
     def description(self) -> str:
         return "Detect header row and skip metadata rows"
 
-    def clean(self, df: pd.DataFrame) -> CleaningResult:
+    def clean(self, df: pl.DataFrame) -> CleaningResult:
         """
         Find the header row and drop metadata rows above it.
 
@@ -48,19 +51,25 @@ class HeaderDetectionRule(CleaningRule):
         Returns:
             CleaningResult with headers properly set
         """
-        result = CleaningResult(df=df.copy())
+        result = CleaningResult(df=df.clone())
+
+        if result.df.is_empty():
+            logger.warning("Header detection skipped: DataFrame is empty")
+            return result
 
         # If config specifies explicit header row, use it
         if self.config.header_detection_method != "auto":
             if self.config.header_detection_method.startswith("row_"):
                 try:
                     row_num = int(self.config.header_detection_method.split("_")[1])
-                    return self._use_explicit_header(df, row_num, result)
+                    return self._use_explicit_header(result.df, row_num, result)
                 except (ValueError, IndexError):
-                    result.add_warning(f"Invalid header_detection_method: {self.config.header_detection_method}, falling back to auto")
+                    result.add_warning(
+                        f"Invalid header_detection_method: {self.config.header_detection_method}, falling back to auto"
+                    )
 
         # Auto-detect header row
-        header_row = self._detect_header_row(df)
+        header_row = self._detect_header_row(result.df)
 
         if header_row is None:
             # Couldn't detect, assume row 0
@@ -74,29 +83,29 @@ class HeaderDetectionRule(CleaningRule):
             result.add_change(
                 ChangeType.ROW_DROPPED,
                 f"Dropped {header_row} metadata rows before header",
-                {"rows_dropped": header_row, "rows": list(range(header_row))}
+                {"rows_dropped": header_row, "rows": list(range(header_row))},
             )
             result.stats["metadata_rows_dropped"] = header_row
 
         # Set the header row
-        df_clean = df.iloc[header_row+1:].copy()  # Data starts after header row
-        df_clean.columns = df.iloc[header_row].values  # Set column names from header row
+        header_values = self._normalise_header_values(result.df.row(header_row, named=False))
+        data_rows = result.df.slice(header_row + 1)
 
-        # Reset index
-        df_clean = df_clean.reset_index(drop=True)
+        rename_map = dict(zip(data_rows.columns, header_values))
+        df_clean = data_rows.rename(rename_map)
 
         result.df = df_clean
         result.add_change(
             ChangeType.HEADER_DETECTION,
             f"Set header from row {header_row}",
-            {"header_row": header_row, "column_count": len(df_clean.columns)}
+            {"header_row": header_row, "column_count": len(df_clean.columns)},
         )
         result.stats["header_row"] = header_row
         result.stats["final_column_count"] = len(df_clean.columns)
 
         return result
 
-    def _detect_header_row(self, df: pd.DataFrame) -> Optional[int]:
+    def _detect_header_row(self, df: pl.DataFrame) -> Optional[int]:
         """
         Detect which row is the header using heuristics.
 
@@ -106,15 +115,17 @@ class HeaderDetectionRule(CleaningRule):
         Returns:
             Row index of header, or None if can't detect
         """
-        max_rows = min(self.config.max_rows_to_check, len(df))
+        max_rows = min(self.config.max_rows_to_check, df.height)
+        if max_rows == 0:
+            return None
+
         scores = []
 
         for i in range(max_rows):
-            score = self._score_row_as_header(df, i)
+            score = self._score_row_as_header(df.row(i, named=False), len(df.columns), i)
             scores.append((i, score))
             logger.debug(f"Row {i} score: {score:.2f}")
 
-        # Return row with highest score (if score > threshold)
         scores.sort(key=lambda x: x[1], reverse=True)
         best_row, best_score = scores[0]
 
@@ -124,24 +135,24 @@ class HeaderDetectionRule(CleaningRule):
 
         return best_row
 
-    def _score_row_as_header(self, df: pd.DataFrame, row_idx: int) -> float:
+    def _score_row_as_header(
+        self,
+        row: Sequence[object],
+        column_count: int,
+        row_idx: int,
+    ) -> float:
         """
         Score a row based on how likely it is to be a header.
 
         Higher score = more likely to be header.
-
-        Args:
-            df: DataFrame
-            row_idx: Row index to score
-
-        Returns:
-            Score (0-100+)
         """
-        row = df.iloc[row_idx]
         score = 0.0
 
+        non_null_vals = [v for v in row if v is not None]
+        non_null_count = len(non_null_vals)
+
         # Factor 1: Non-null percentage (headers should be mostly non-null)
-        non_null_pct = row.notna().sum() / len(row)
+        non_null_pct = non_null_count / column_count if column_count else 0
         if non_null_pct > 0.8:
             score += 40  # Very complete row
         elif non_null_pct > 0.5:
@@ -150,8 +161,8 @@ class HeaderDetectionRule(CleaningRule):
             score -= 50  # Probably not a header (metadata row often has 1-2 values)
 
         # Factor 2: String values (headers are usually strings)
-        string_count = sum(1 for v in row if isinstance(v, str))
-        string_pct = string_count / row.notna().sum() if row.notna().sum() > 0 else 0
+        string_count = sum(1 for v in non_null_vals if isinstance(v, str))
+        string_pct = string_count / non_null_count if non_null_count else 0
         if string_pct > 0.9:
             score += 30  # Mostly strings
         elif string_pct > 0.7:
@@ -160,8 +171,7 @@ class HeaderDetectionRule(CleaningRule):
             score -= 20  # Not enough strings
 
         # Factor 3: Average length (headers are usually 5-50 chars)
-        non_null_vals = row.dropna()
-        if len(non_null_vals) > 0:
+        if non_null_vals:
             avg_length = sum(len(str(v)) for v in non_null_vals) / len(non_null_vals)
             if 5 <= avg_length <= 50:
                 score += 20  # Good header length
@@ -171,14 +181,21 @@ class HeaderDetectionRule(CleaningRule):
                 score -= 10  # Too short (might be data)
 
         # Factor 4: Metadata indicators (negative score)
-        row_str = ' '.join(str(v) for v in non_null_vals if pd.notna(v)).lower()
-        metadata_keywords = ['exported', 'generated', 'report date', 'created on', '©', 'copyright']
+        row_str = " ".join(str(v) for v in non_null_vals).lower()
+        metadata_keywords = [
+            "exported",
+            "generated",
+            "report date",
+            "created on",
+            "©",
+            "copyright",
+        ]
         if any(keyword in row_str for keyword in metadata_keywords):
             score -= 40  # Definitely metadata
 
         # Factor 5: Duplicate values (headers should be mostly unique)
-        if len(non_null_vals) > 0:
-            unique_pct = len(set(str(v) for v in non_null_vals)) / len(non_null_vals)
+        if non_null_vals:
+            unique_pct = len({str(v).lower() for v in non_null_vals}) / len(non_null_vals)
             if unique_pct > 0.9:
                 score += 15  # Very unique
             elif unique_pct < 0.5:
@@ -194,10 +211,17 @@ class HeaderDetectionRule(CleaningRule):
 
         return score
 
-    def _use_explicit_header(self, df: pd.DataFrame, row_num: int, result: CleaningResult) -> CleaningResult:
+    def _use_explicit_header(
+        self,
+        df: pl.DataFrame,
+        row_num: int,
+        result: CleaningResult,
+    ) -> CleaningResult:
         """Use explicitly specified header row."""
-        if row_num >= len(df):
-            result.add_warning(f"Specified header row {row_num} exceeds DataFrame length {len(df)}, using row 0")
+        if row_num >= df.height:
+            result.add_warning(
+                f"Specified header row {row_num} exceeds DataFrame length {df.height}, using row 0"
+            )
             row_num = 0
 
         # Drop rows before header
@@ -205,21 +229,31 @@ class HeaderDetectionRule(CleaningRule):
             result.add_change(
                 ChangeType.ROW_DROPPED,
                 f"Dropped {row_num} rows before explicitly specified header",
-                {"rows_dropped": row_num}
+                {"rows_dropped": row_num},
             )
 
-        # Set header
-        df_clean = df.iloc[row_num+1:].copy()
-        df_clean.columns = df.iloc[row_num].values
-        df_clean = df_clean.reset_index(drop=True)
+        header_values = self._normalise_header_values(df.row(row_num, named=False))
+        data_rows = df.slice(row_num + 1)
+        rename_map = dict(zip(data_rows.columns, header_values))
 
-        result.df = df_clean
+        result.df = data_rows.rename(rename_map)
         result.add_change(
             ChangeType.HEADER_DETECTION,
             f"Used explicitly specified header row {row_num}",
-            {"header_row": row_num}
+            {"header_row": row_num},
         )
-        result.stats["header_row"] = row_num
-        result.stats["explicit"] = True
 
         return result
+
+    @staticmethod
+    def _normalise_header_values(values: Sequence[object]) -> list[str]:
+        """Normalise raw header row entries into usable column names."""
+        normalised = []
+        for idx, value in enumerate(values):
+            if value is None:
+                normalised.append(f"Column_{idx + 1}")
+                continue
+
+            name = str(value).strip()
+            normalised.append(name if name else f"Column_{idx + 1}")
+        return normalised

@@ -1,11 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { datasetsApi, mappingsApi } from '@/services/api'
-import { Mapping, Dataset, CustomFieldDefinition } from '@/types/mapping'
+import { Mapping, Dataset, CustomFieldDefinition, Candidate } from '@/types/mapping'
 import CustomFieldModal from '@/components/CustomFieldModal'
 import TransformModal from '@/components/TransformModal'
 import OdooConnectionModal from '@/components/OdooConnectionModal'
 import LambdaMappingModal, { LambdaMappingData } from '@/components/LambdaMappingModal'
+import StatusOverlay, { StatusStep } from '@/components/StatusOverlay'
 
 export default function Mappings() {
   const { id } = useParams()
@@ -16,15 +17,15 @@ export default function Mappings() {
   const [expandedMapping, setExpandedMapping] = useState<number | null>(null)
   const [customFieldModal, setCustomFieldModal] = useState<{ mapping: Mapping; profileId?: number } | null>(null)
   const [transformModal, setTransformModal] = useState<number | null>(null)
-  const [generatingAddon, setGeneratingAddon] = useState(false)
-  const [showInstructions, setShowInstructions] = useState(false)
-  const [instructions, setInstructions] = useState('')
+  
   const [odooConnections, setOdooConnections] = useState<any[]>([])
   const [odooConnectionModal, setOdooConnectionModal] = useState(false)
   const [creatingFields, setCreatingFields] = useState(false)
   const [fieldCreationResult, setFieldCreationResult] = useState<any>(null)
   const [lambdaModal, setLambdaModal] = useState<{ isOpen: boolean; mapping?: Mapping }>({ isOpen: false })
   const [availableColumns, setAvailableColumns] = useState<string[]>([])
+  const [generatingSteps, setGeneratingSteps] = useState<StatusStep[]>([])
+  const [generatingProgress, setGeneratingProgress] = useState(0)
 
   useEffect(() => {
     loadData()
@@ -77,7 +78,7 @@ export default function Mappings() {
 
   const editLambdaMapping = async (mappingId: number, lambdaData: LambdaMappingData) => {
     try {
-      await mappingsApi.update(mappingId, lambdaData)
+      await mappingsApi.update(mappingId, lambdaData as unknown as Record<string, unknown>)
       setMappings(prev => 
         prev.map(m => m.id === mappingId ? { ...m, ...lambdaData } : m)
       )
@@ -89,16 +90,44 @@ export default function Mappings() {
 
   const generateMappings = async () => {
     setGenerating(true)
+    const steps: StatusStep[] = [
+      { id: 'generate', label: 'Generating mapping suggestions...', status: 'in_progress' }
+    ]
+    setGeneratingSteps(steps)
+    setGeneratingProgress(5)
+
     try {
       const response = await fetch(`/api/v1/datasets/${id}/mappings/generate`, {
         method: 'POST'
       })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate mappings')
+      }
+
       const data = await response.json()
       setMappings(data.mappings || [])
+
+      setGeneratingSteps(steps.map(step => ({ ...step, status: 'complete' })))
+      setGeneratingProgress(100)
+
+      setTimeout(() => {
+        setGenerating(false)
+      }, 400)
     } catch (error) {
       console.error('Failed to generate mappings:', error)
-    } finally {
-      setGenerating(false)
+      setGeneratingSteps([
+        {
+          id: 'generate',
+          label: 'Generating mapping suggestions...',
+          status: 'error',
+          detail: error instanceof Error ? error.message : 'Generation failed'
+        }
+      ])
+      setGeneratingProgress(0)
+      setTimeout(() => {
+        setGenerating(false)
+      }, 600)
     }
   }
 
@@ -158,44 +187,9 @@ export default function Mappings() {
     }
   }
 
-  const generateAddon = async () => {
-    setGeneratingAddon(true)
-    try {
-      const response = await fetch(`/api/v1/datasets/${id}/addon/generate`, {
-        method: 'POST'
-      })
+  
 
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'custom_fields_migration.zip'
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-
-        // Fetch installation instructions
-        await fetchInstructions()
-      }
-    } catch (error) {
-      console.error('Failed to generate addon:', error)
-    } finally {
-      setGeneratingAddon(false)
-    }
-  }
-
-  const fetchInstructions = async () => {
-    try {
-      const response = await fetch(`/api/v1/datasets/${id}/addon/instructions`)
-      const data = await response.json()
-      setInstructions(data.instructions)
-      setShowInstructions(true)
-    } catch (error) {
-      console.error('Failed to fetch instructions:', error)
-    }
-  }
+  
 
   const acceptAllHighConfidence = async () => {
     const highConfMappings = mappings.filter(m =>
@@ -298,7 +292,20 @@ export default function Mappings() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>
+    return (
+      <>
+        <div className="p-6"></div>
+        <StatusOverlay
+          isOpen={true}
+          title="Loading Mappings"
+          steps={[
+            { id: '1', label: 'Loading dataset...', status: 'in_progress' },
+            { id: '2', label: 'Loading existing mappings...', status: 'pending' }
+          ]}
+          progress={50}
+        />
+      </>
+    )
   }
 
   if (!dataset) {
@@ -742,6 +749,14 @@ export default function Mappings() {
           description: lambdaModal.mapping.rationale || ''
         } : undefined}
         availableColumns={availableColumns}
+      />
+
+      {/* Loading Overlay for Generate Mappings */}
+      <StatusOverlay
+        isOpen={generating}
+        title="Generating Mappings"
+        steps={generatingSteps}
+        progress={generatingProgress}
       />
     </div>
   )

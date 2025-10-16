@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.services.odoo_migrate_export import OdooMigrateExportService
+from app.services.export_service import ExportService
+from app.schemas.export import ExportResponse
 
 router = APIRouter()
 
@@ -108,3 +110,54 @@ async def preview_export(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Preview failed: {str(e)}")
+
+
+@router.post("/datasets/{dataset_id}/export-for-odoo", response_model=ExportResponse)
+def export_for_odoo(
+    dataset_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Export dataset to deterministic Odoo CSV format.
+
+    This is the main export endpoint for the deterministic pipeline:
+    1. Validates data against registry specs
+    2. Tracks exceptions (bad rows never block good rows)
+    3. Generates deterministic external IDs with dedup tracking
+    4. Applies idempotent normalizations (phone, email, date)
+    5. Emits CSVs in correct import order (parents before children)
+    6. Returns ZIP with all CSVs + exception summary
+
+    Returns:
+    - ZIP file path with CSVs ready for Odoo import
+    - Per-model counts (rows emitted, exceptions)
+    - Exception summary by error code
+
+    Use GET /datasets/{dataset_id}/exceptions to view detailed errors.
+    """
+    try:
+        service = ExportService(db)
+        result = service.export_to_odoo_csv(dataset_id)
+
+        # Convert dataclass to dict for Pydantic
+        return ExportResponse(
+            dataset_id=result.dataset_id,
+            zip_path=result.zip_path,
+            models=[
+                {
+                    "model": m.model,
+                    "csv_filename": m.csv_filename,
+                    "rows_emitted": m.rows_emitted,
+                    "exceptions_count": m.exceptions_count,
+                }
+                for m in result.models
+            ],
+            total_emitted=result.total_emitted,
+            total_exceptions=result.total_exceptions,
+            exceptions_by_code=result.exceptions_by_code,
+            message=f"Exported {result.total_emitted} rows across {len(result.models)} models. {result.total_exceptions} exceptions tracked.",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")

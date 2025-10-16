@@ -56,5 +56,11 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
 
+    # Export settings (Commit 5)
+    MODE: str = "lean"  # lean or scale
+    RUNNER: str = "inline"  # inline or thread or celery
+    ARTIFACT_ROOT: str = "./out"  # Output directory for exports
+    REGISTRY_FILE: str = "registry/odoo.yaml"  # Path to registry YAML
+
 
 settings = Settings()

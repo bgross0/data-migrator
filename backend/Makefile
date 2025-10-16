@@ -12,7 +12,7 @@ demo:
 
 test:
 	@echo "🧪 Running test suite..."
-	pytest -v tests/test_registry_loader.py tests/test_normalizers.py tests/test_validator.py tests/test_csv_emitter.py
+	@PYTHONPATH=. venv/bin/pytest -v tests/test_registry_loader.py tests/test_normalizers.py tests/test_validator.py tests/test_csv_emitter.py
 	@echo ""
 	@echo "✅ All tests passed!"
 

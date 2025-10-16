@@ -18,7 +18,7 @@ test:
 
 determinism:
 	@echo "🔍 Testing determinism (byte-identical exports)..."
-	@pytest -v tests/test_determinism.py
+	@PYTHONPATH=. venv/bin/pytest -v tests/test_determinism.py
 	@echo ""
 	@echo "✅ Determinism verified: SHA256 hashes match!"
 

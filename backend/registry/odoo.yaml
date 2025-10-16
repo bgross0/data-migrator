@@ -1,39 +1,312 @@
 version: 1
 import_order:
+  - res.currency
+  - res.country
+  - res.country.state
+  - res.partner.industry
+  - product.category
+  - uom.uom
+  - res.users
   - res.company
+  - product.template
+  - product.product
   - res.partner
   - crm.team
-  - res.users
   - utm.source
   - utm.medium
+  - utm.campaign
   - crm.lost.reason
   - crm.lead
   - mail.activity
   - project.project
+  - sale.order
+  - sale.order.line
+  - account.move
+  - account.analytic.line
 
 models:
-  res.partner:
-    csv: export_res_partner.csv
-    id_template: "partner_{slug(email) or slug(phone) or slug(name)}"
-    headers: ["id", "name", "email", "phone", "customer_rank", "supplier_rank", "active"]
+  res.company:
+    csv: export_res_company.csv
+    id_template: "company_{slug(name)}"
+    headers: ["id", "name", "logo", "report_header", "report_footer", "company_registry", "vat", "currency_id", "currency_id/id", "user_id", "user_id/id"]
     fields:
       id:
         derived: true
       name:
         required: true
         type: string
+      logo:
+        type: string
+      report_header:
+        type: text
+      report_footer:
+        type: text
+      company_registry:
+        type: string
+      vat:
+        type: string
+      currency_id:
+        type: m2o
+        target: res.currency
+      currency_id/id:
+        type: m2o
+        target: res.currency
+        external_field: currency_id
+      user_id:
+        type: m2o
+        target: res.users
+      user_id/id:
+        type: m2o
+        target: res.users
+        external_field: user_id
+
+  res.currency:
+    csv: export_res_currency.csv
+    id_template: "currency_{slug(name)}"
+    headers: ["id", "name", "symbol", "rounding", "position", "decimal_places", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      symbol:
+        type: string
+      rounding:
+        type: float
+      position:
+        type: enum
+        map:
+          before: before
+          after: after
+        default: after
+      decimal_places:
+        type: int
+        default: 2
+      active:
+        type: bool
+        default: true
+
+  res.country:
+    csv: export_res_country.csv
+    id_template: "country_{slug(code) or slug(name)}"
+    headers: ["id", "name", "code", "currency_id", "currency_id/id", "phone_code", "address_format"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      code:
+        type: string
+        required: true
+      currency_id:
+        type: m2o
+        target: res.currency
+      currency_id/id:
+        type: m2o
+        target: res.currency
+        external_field: currency_id
+      phone_code:
+        type: int
+      address_format:
+        type: string
+
+  res.country.state:
+    csv: export_res_state.csv
+    id_template: "state_{slug(name)}"
+    headers: ["id", "name", "code", "country_id", "country_id/id"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      code:
+        type: string
+      country_id:
+        type: m2o
+        target: res.country
+        required: true
+      country_id/id:
+        type: m2o
+        target: res.country
+        required: true
+        external_field: country_id
+
+  res.users:
+    csv: export_res_users.csv
+    id_template: "user_{slug(login)}"
+    headers: ["id", "login", "name", "email", "password", "groups_id", "notification_type", "active"]
+    fields:
+      id:
+        derived: true
+      login:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
       email:
-        type: email
-        transform: normalize_email
+        type: string
+      password:
+        type: string
+      groups_id:
+        type: tags
+      notification_type:
+        type: enum
+        map:
+          email: email
+          inbox: inbox
+        default: email
+      active:
+        type: bool
+        default: true
+
+  product.category:
+    csv: export_product_category.csv
+    id_template: "category_{slug(name)}"
+    headers: ["id", "name"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+
+  uom.uom:
+    csv: export_uom_uom.csv
+    id_template: "uom_{slug(name)}"
+    headers: ["id", "name", "uom_type", "factor", "rounding"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      uom_type:
+        type: enum
+        map:
+          reference: reference
+          bigger: bigger
+          smaller: smaller
+        default: reference
+      factor:
+        type: float
+      rounding:
+        type: float
+
+  utm.campaign:
+    csv: export_utm_campaign.csv
+    id_template: "campaign_{slug(name)}"
+    headers: ["id", "name", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      active:
+        type: bool
+        default: true
+
+  res.partner:
+    csv: export_res_partner.csv
+    id_template: "partner_{slug(email) or slug(phone) or slug(name)}"
+    headers: ["id", "name", "display_name", "company_name", "is_company", "parent_id", "parent_id/id", "street", "street2", "city", "state_id", "state_id/id", "zip", "country_id", "country_id/id", "phone", "mobile", "email", "website", "function", "customer_rank", "supplier_rank", "is_customer", "is_supplier", "user_id", "user_id/id", "company_id", "company_id/id", "credit_limit", "vat", "ref", "lang", "tz", "comment", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      display_name:
+        type: string
+      company_name:
+        type: string
+      is_company:
+        type: bool
+        default: false
+      parent_id:
+        type: m2o
+        target: res.partner
+      parent_id/id:
+        type: m2o
+        target: res.partner
+        external_field: parent_id
+      street:
+        type: string
+      street2:
+        type: string
+      city:
+        type: string
+      state_id:
+        type: m2o
+        target: res.country.state
+      state_id/id:
+        type: m2o
+        target: res.country.state
+        external_field: state_id
+      zip:
+        type: string
+      country_id:
+        type: m2o
+        target: res.country
+      country_id/id:
+        type: m2o
+        target: res.country
+        external_field: country_id
       phone:
         type: phone
         transform: normalize_phone_us
+      mobile:
+        type: phone
+        transform: normalize_phone_us
+      email:
+        type: email
+        transform: normalize_email
+      website:
+        type: string
+      function:
+        type: string
       customer_rank:
         type: int
         default: 1
       supplier_rank:
         type: int
         default: 0
+      is_customer:
+        type: bool
+        default: true
+      is_supplier:
+        type: bool
+        default: false
+      user_id:
+        type: m2o
+        target: res.users
+      user_id/id:
+        type: m2o
+        target: res.users
+        external_field: user_id
+      company_id:
+        type: m2o
+        target: res.company
+      company_id/id:
+        type: m2o
+        target: res.company
+        external_field: company_id
+      credit_limit:
+        type: float
+      vat:
+        type: string
+      ref:
+        type: string
+      lang:
+        type: string
+      tz:
+        type: string
+      comment:
+        type: text
       active:
         type: bool
         default: true
@@ -41,7 +314,7 @@ models:
   crm.lead:
     csv: export_crm_lead.csv
     id_template: "lead_{slug(name)}"
-    headers: ["id", "name", "type", "stage_id/id", "lost_reason_id/id", "partner_id/id", "email_from", "phone", "team_id/id", "user_id/id", "active"]
+    headers: ["id", "name", "type", "stage_id", "stage_id/id", "lost_reason_id", "lost_reason_id/id", "partner_id", "partner_id/id", "contact_name", "email_from", "phone", "mobile", "street", "city", "state_id", "state_id/id", "zip", "country_id", "country_id/id", "user_id", "user_id/id", "team_id", "team_id/id", "campaign_id", "campaign_id/id", "source_id", "source_id/id", "medium_id", "medium_id/id", "priority", "date_deadline", "expected_revenue", "probability", "description", "tag_ids", "active"]
     fields:
       id:
         derived: true
@@ -54,28 +327,568 @@ models:
           lead: lead
           opportunity: opportunity
         default: lead
+      stage_id:
+        type: enum
+        map_from_seed: "crm_stages"
       stage_id/id:
         type: enum
         map_from_seed: "crm_stages"
+        external_field: stage_id
+      lost_reason_id:
+        type: enum
+        map_from_seed: "crm_lost_reasons"
+        optional: true
       lost_reason_id/id:
         type: enum
         map_from_seed: "crm_lost_reasons"
         optional: true
+        external_field: lost_reason_id
+      partner_id:
+        type: m2o
+        target: res.partner
+        optional: true
       partner_id/id:
         type: m2o
         target: res.partner
+        optional: true
+        external_field: partner_id
+      contact_name:
+        type: string
+        optional: true
       email_from:
         type: email
         transform: normalize_email
       phone:
         type: phone
         transform: normalize_phone_us
-      team_id/id:
+      mobile:
+        type: phone
+        transform: normalize_phone_us
+      street:
+        type: string
+        optional: true
+      city:
+        type: string
+        optional: true
+      state_id:
         type: m2o
-        target: crm.team
+        target: res.country.state
+        optional: true
+      state_id/id:
+        type: m2o
+        target: res.country.state
+        optional: true
+        external_field: state_id
+      zip:
+        type: string
+        optional: true
+      country_id:
+        type: m2o
+        target: res.country
+        optional: true
+      country_id/id:
+        type: m2o
+        target: res.country
+        optional: true
+        external_field: country_id
+      user_id:
+        type: m2o
+        target: res.users
+        optional: true
       user_id/id:
         type: m2o
         target: res.users
+        optional: true
+        external_field: user_id
+      team_id:
+        type: m2o
+        target: crm.team
+        optional: true
+      team_id/id:
+        type: m2o
+        target: crm.team
+        optional: true
+        external_field: team_id
+      campaign_id:
+        type: m2o
+        target: utm.campaign
+        optional: true
+      campaign_id/id:
+        type: m2o
+        target: utm.campaign
+        optional: true
+        external_field: campaign_id
+      source_id:
+        type: m2o
+        target: utm.source
+        optional: true
+      source_id/id:
+        type: m2o
+        target: utm.source
+        optional: true
+        external_field: source_id
+      medium_id:
+        type: m2o
+        target: utm.medium
+        optional: true
+      medium_id/id:
+        type: m2o
+        target: utm.medium
+        optional: true
+        external_field: medium_id
+      priority:
+        type: enum
+        map:
+          low: "0"
+          medium: "1"
+          high: "2"
+        default: "1"
+      date_deadline:
+        type: date
+        transform: normalize_date_any
+        optional: true
+      expected_revenue:
+        type: float
+        optional: true
+      probability:
+        type: int
+        optional: true
+      description:
+        type: text
+        optional: true
+      tag_ids:
+        type: tags
+        optional: true
       active:
         type: bool
-        rule: "isset(stage_id/id) and (stage_id/id == 'stage_won' or isset(lost_reason_id/id)) ? false : true"
+        rule: "isset(stage_id) and (stage_id == 'stage_won' or isset(lost_reason_id)) ? false : true"
+
+  product.template:
+    csv: export_product_template.csv
+    id_template: "product_{slug(default_code) or slug(name)}"
+    headers: ["id", "name", "default_code", "barcode", "sale_ok", "purchase_ok", "type", "categ_id", "categ_id/id", "description", "description_sale", "description_purchase", "weight", "volume", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      default_code:
+        type: string
+      barcode:
+        type: string
+      sale_ok:
+        type: bool
+        default: true
+      purchase_ok:
+        type: bool
+        default: true
+      type:
+        type: enum
+        map:
+          consumable: consumable
+          service: service
+          stockable: stockable
+        default: product
+      categ_id:
+        type: m2o
+        target: product.category
+        optional: true
+      categ_id/id:
+        type: m2o
+        target: product.category
+        optional: true
+        external_field: categ_id
+      description:
+        type: text
+        optional: true
+      description_sale:
+        type: text
+        optional: true
+      description_purchase:
+        type: text
+        optional: true
+      weight:
+        type: float
+        optional: true
+      volume:
+        type: float
+        optional: true
+      active:
+        type: bool
+        default: true
+
+  product.product:
+    csv: export_product.csv
+    id_template: "product_{slug(default_code) or slug(name)}_variant"
+    headers: ["id", "product_tmpl_id", "product_tmpl_id/id", "default_code", "barcode", "list_price", "standard_price", "qty_available", "virtual_available", "active"]
+    fields:
+      id:
+        derived: true
+      product_tmpl_id:
+        type: m2o
+        target: product.template
+        required: true
+      product_tmpl_id/id:
+        type: m2o
+        target: product.template
+        required: true
+        external_field: product_tmpl_id
+      default_code:
+        type: string
+      barcode:
+        type: string
+      list_price:
+        type: float
+      standard_price:
+        type: float
+      qty_available:
+        type: float
+        readonly: true
+      virtual_available:
+        type: float
+        readonly: true
+      active:
+        type: bool
+        default: true
+
+  sale.order:
+    csv: export_sale_order.csv
+    id_template: "sale_{slug(name)}"
+    headers: ["id", "name", "date_order", "state", "partner_id", "partner_id/id", "partner_invoice_id", "partner_invoice_id/id", "partner_shipping_id", "partner_shipping_id/id", "user_id", "user_id/id", "team_id", "team_id/id", "pricelist_id", "pricelist_id/id", "payment_term_id", "payment_term_id/id", "validity_date", "commitment_date", "amount_untaxed", "amount_tax", "amount_total", "note", "client_order_ref", "campaign_id", "campaign_id/id", "source_id", "source_id/id", "medium_id", "medium_id/id", "tag_ids"]
+    fields:
+      id:
+        derived: true
+      name:
+        type: string
+        required: true
+      date_order:
+        type: datetime
+        transform: normalize_date_any
+      state:
+        type: enum
+        map:
+          draft: draft
+          sent: sent
+          sale: sale
+          done: done
+          cancel: cancel
+        default: draft
+      partner_id:
+        type: m2o
+        target: res.partner
+        required: true
+      partner_id/id:
+        type: m2o
+        target: res.partner
+        required: true
+        external_field: partner_id
+      partner_invoice_id:
+        type: m2o
+        target: res.partner
+      partner_invoice_id/id:
+        type: m2o
+        target: res.partner
+        external_field: partner_invoice_id
+      partner_shipping_id:
+        type: m2o
+        target: res.partner
+      partner_shipping_id/id:
+        type: m2o
+        target: res.partner
+        external_field: partner_shipping_id
+      user_id:
+        type: m2o
+        target: res.users
+      user_id/id:
+        type: m2o
+        target: res.users
+        external_field: user_id
+      team_id:
+        type: m2o
+        target: crm.team
+      team_id/id:
+        type: m2o
+        target: crm.team
+        external_field: team_id
+      pricelist_id:
+        type: m2o
+        target: product.pricelist
+      pricelist_id/id:
+        type: m2o
+        target: product.pricelist
+        external_field: pricelist_id
+      payment_term_id:
+        type: m2o
+        target: account.payment.term
+      payment_term_id/id:
+        type: m2o
+        target: account.payment.term
+        external_field: payment_term_id
+      validity_date:
+        type: date
+        transform: normalize_date_any
+      commitment_date:
+        type: date
+        transform: normalize_date_any
+      amount_untaxed:
+        type: float
+        readonly: true
+      amount_tax:
+        type: float
+        readonly: true
+      amount_total:
+        type: float
+        readonly: true
+      note:
+        type: text
+      client_order_ref:
+        type: string
+      campaign_id:
+        type: m2o
+        target: utm.campaign
+      campaign_id/id:
+        type: m2o
+        target: utm.campaign
+        external_field: campaign_id
+      source_id:
+        type: m2o
+        target: utm.source
+      source_id/id:
+        type: m2o
+        target: utm.source
+        external_field: source_id
+      medium_id:
+        type: m2o
+        target: utm.medium
+      medium_id/id:
+        type: m2o
+        target: utm.medium
+        external_field: medium_id
+      tag_ids:
+        type: tags
+
+  sale.order.line:
+    csv: export_sale_order_line.csv
+    id_template: "sale_line_{slug(order_id/name)}_{slug(product_id/default_code)}"
+    headers: ["id", "order_id", "order_id/id", "product_id", "product_id/id", "name", "product_uom_qty", "product_uom", "product_uom/id", "qty_delivered", "price_unit", "discount", "price_subtotal", "price_total", "purchase_price", "margin", "tax_id"]
+    fields:
+      id:
+        derived: true
+      order_id:
+        type: m2o
+        target: sale.order
+        required: true
+      order_id/id:
+        type: m2o
+        target: sale.order
+        required: true
+        external_field: order_id
+      product_id:
+        type: m2o
+        target: product.product
+        required: true
+      product_id/id:
+        type: m2o
+        target: product.product
+        required: true
+        external_field: product_id
+      name:
+        type: text
+        required: true
+      product_uom_qty:
+        type: float
+        required: true
+      product_uom:
+        type: m2o
+        target: uom.uom
+      product_uom/id:
+        type: m2o
+        target: uom.uom
+        external_field: product_uom
+      qty_delivered:
+        type: float
+        readonly: true
+      price_unit:
+        type: float
+      discount:
+        type: float
+      price_subtotal:
+        type: float
+        readonly: true
+      price_total:
+        type: float
+        readonly: true
+      purchase_price:
+        type: float
+      margin:
+        type: float
+        readonly: true
+      tax_id:
+        type: m2o
+        target: account.tax
+
+  account.move:
+    csv: export_account_move.csv
+    id_template: "invoice_{slug(name)}"
+    headers: ["id", "name", "move_type", "date", "invoice_date", "invoice_date_due", "state", "partner_id", "partner_id/id", "commercial_partner_id", "commercial_partner_id/id", "amount_untaxed", "amount_tax", "amount_total", "amount_residual", "ref", "invoice_origin", "payment_reference", "invoice_payment_term_id", "invoice_payment_term_id/id", "currency_id", "currency_id/id", "narration", "invoice_user_id", "invoice_user_id/id"]
+    fields:
+      id:
+        derived: true
+      name:
+        type: string
+      move_type:
+        type: enum
+        map:
+          out_invoice: out_invoice
+          in_invoice: in_invoice
+          out_refund: out_refund
+          in_refund: in_refund
+          entry: entry
+        default: out_invoice
+      date:
+        type: date
+        transform: normalize_date_any
+      invoice_date:
+        type: date
+        transform: normalize_date_any
+      invoice_date_due:
+        type: date
+        transform: normalize_date_any
+      state:
+        type: enum
+        map:
+          draft: draft
+          posted: posted
+          cancel: cancel
+        default: draft
+      partner_id:
+        type: m2o
+        target: res.partner
+        required: true
+      partner_id/id:
+        type: m2o
+        target: res.partner
+        required: true
+        external_field: partner_id
+      commercial_partner_id:
+        type: m2o
+        target: res.partner
+      commercial_partner_id/id:
+        type: m2o
+        target: res.partner
+        external_field: commercial_partner_id
+      amount_untaxed:
+        type: float
+        readonly: true
+      amount_tax:
+        type: float
+        readonly: true
+      amount_total:
+        type: float
+        readonly: true
+      amount_residual:
+        type: float
+        readonly: true
+      ref:
+        type: string
+      invoice_origin:
+        type: string
+      payment_reference:
+        type: string
+      invoice_payment_term_id:
+        type: m2o
+        target: account.payment.term
+      invoice_payment_term_id/id:
+        type: m2o
+        target: account.payment.term
+        external_field: invoice_payment_term_id
+      currency_id:
+        type: m2o
+        target: res.currency
+      currency_id/id:
+        type: m2o
+        target: res.currency
+        external_field: currency_id
+      narration:
+        type: text
+      invoice_user_id:
+        type: m2o
+        target: res.users
+      invoice_user_id/id:
+        type: m2o
+        target: res.users
+        external_field: invoice_user_id
+
+  account.analytic.line:
+    csv: export_account_analytic_line.csv
+    id_template: "analytic_{slug(name)}"
+    headers: ["id", "name", "date", "account_id", "account_id/id", "general_account_id", "general_account_id/id", "partner_id", "partner_id/id", "amount", "unit_amount", "product_id", "product_id/id", "product_uom_id", "product_uom_id/id", "tag_ids", "company_id", "company_id/id", "currency_id", "currency_id/id", "user_id"]
+    fields:
+      id:
+        derived: true
+      name:
+        type: string
+      date:
+        type: date
+        transform: normalize_date_any
+      account_id:
+        type: m2o
+        target: account.analytic.account
+        required: true
+      account_id/id:
+        type: m2o
+        target: account.analytic.account
+        required: true
+        external_field: account_id
+      general_account_id:
+        type: m2o
+        target: account.account
+      general_account_id/id:
+        type: m2o
+        target: account.account
+        external_field: general_account_id
+      partner_id:
+        type: m2o
+        target: res.partner
+      partner_id/id:
+        type: m2o
+        target: res.partner
+        external_field: partner_id
+      amount:
+        type: float
+      unit_amount:
+        type: float
+      product_id:
+        type: m2o
+        target: product.product
+      product_id/id:
+        type: m2o
+        target: product.product
+        external_field: product_id
+      product_uom_id:
+        type: m2o
+        target: uom.uom
+      product_uom_id/id:
+        type: m2o
+        target: uom.uom
+        external_field: product_uom_id
+      tag_ids:
+        type: tags
+      company_id:
+        type: m2o
+        target: res.company
+      company_id/id:
+        type: m2o
+        target: res.company
+        external_field: company_id
+      currency_id:
+        type: m2o
+        target: res.currency
+      currency_id/id:
+        type: m2o
+        target: res.currency
+        external_field: currency_id
+      user_id:
+        type: m2o
+        target: res.users

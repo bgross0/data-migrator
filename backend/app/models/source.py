@@ -41,6 +41,7 @@ class Dataset(Base):
     sheets = relationship("Sheet", back_populates="dataset", cascade="all, delete-orphan")
     mappings = relationship("Mapping", back_populates="dataset", cascade="all, delete-orphan")
     runs = relationship("Run", back_populates="dataset", cascade="all, delete-orphan")
+    exceptions = relationship("Exception", back_populates="dataset", cascade="all, delete-orphan")
 
 
 class Sheet(Base):

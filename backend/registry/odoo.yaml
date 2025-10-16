@@ -1,0 +1,81 @@
+version: 1
+import_order:
+  - res.company
+  - res.partner
+  - crm.team
+  - res.users
+  - utm.source
+  - utm.medium
+  - crm.lost.reason
+  - crm.lead
+  - mail.activity
+  - project.project
+
+models:
+  res.partner:
+    csv: export_res_partner.csv
+    id_template: "partner_{slug(email) or slug(phone) or slug(name)}"
+    headers: ["id", "name", "email", "phone", "customer_rank", "supplier_rank", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      email:
+        type: email
+        transform: normalize_email
+      phone:
+        type: phone
+        transform: normalize_phone_us
+      customer_rank:
+        type: int
+        default: 1
+      supplier_rank:
+        type: int
+        default: 0
+      active:
+        type: bool
+        default: true
+
+  crm.lead:
+    csv: export_crm_lead.csv
+    id_template: "lead_{slug(name)}"
+    headers: ["id", "name", "type", "stage_id/id", "lost_reason_id/id", "partner_id/id", "email_from", "phone", "team_id/id", "user_id/id", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      type:
+        type: enum
+        map:
+          lead: lead
+          opportunity: opportunity
+        default: lead
+      stage_id/id:
+        type: enum
+        map_from_seed: "crm_stages"
+      lost_reason_id/id:
+        type: enum
+        map_from_seed: "crm_lost_reasons"
+        optional: true
+      partner_id/id:
+        type: m2o
+        target: res.partner
+      email_from:
+        type: email
+        transform: normalize_email
+      phone:
+        type: phone
+        transform: normalize_phone_us
+      team_id/id:
+        type: m2o
+        target: crm.team
+      user_id/id:
+        type: m2o
+        target: res.users
+      active:
+        type: bool
+        rule: "isset(stage_id/id) and (stage_id/id == 'stage_won' or isset(lost_reason_id/id)) ? false : true"

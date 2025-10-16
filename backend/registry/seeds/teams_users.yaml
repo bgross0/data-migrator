@@ -1,0 +1,35 @@
+# Minimal teams and users seeds with synonym mappings
+teams:
+  canonical:
+    crm_team_sales: "crm_team_sales"
+    crm_team_enterprise: "crm_team_enterprise"
+
+  synonyms_map:
+    "sales": "crm_team_sales"
+    "Sales": "crm_team_sales"
+    "sales_team": "crm_team_sales"
+    "default": "crm_team_sales"
+
+    "enterprise": "crm_team_enterprise"
+    "Enterprise": "crm_team_enterprise"
+    "enterprise_sales": "crm_team_enterprise"
+    "big_deals": "crm_team_enterprise"
+
+users:
+  canonical:
+    user_rep_jane: "user_rep_jane"
+    user_rep_john: "user_rep_john"
+    user_rep_mary: "user_rep_mary"
+
+  synonyms_map:
+    "rep_jane": "user_rep_jane"
+    "jane": "user_rep_jane"
+    "Jane": "user_rep_jane"
+
+    "rep_john": "user_rep_john"
+    "john": "user_rep_john"
+    "John": "user_rep_john"
+
+    "rep_mary": "user_rep_mary"
+    "mary": "user_rep_mary"
+    "Mary": "user_rep_mary"

@@ -1,0 +1,26 @@
+# CRM Lost Reason seeds with synonym mappings
+canonical:
+  lost_no_response: "lost_no_response"
+  lost_spam: "lost_spam"
+  lost_too_small: "lost_too_small"
+
+synonyms_map:
+  # No response aliases
+  "no_response": "lost_no_response"
+  "no response": "lost_no_response"
+  "unresponsive": "lost_no_response"
+  "ghosted": "lost_no_response"
+  "no_answer": "lost_no_response"
+
+  # Spam aliases
+  "spam": "lost_spam"
+  "junk": "lost_spam"
+  "fake": "lost_spam"
+  "invalid": "lost_spam"
+
+  # Too small aliases
+  "too_small": "lost_too_small"
+  "too small": "lost_too_small"
+  "small_deal": "lost_too_small"
+  "not_worth_it": "lost_too_small"
+  "budget_too_low": "lost_too_small"

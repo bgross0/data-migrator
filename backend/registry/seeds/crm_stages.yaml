@@ -1,0 +1,25 @@
+# CRM Stage seeds with synonym mappings
+canonical:
+  stage_open_qualification: "stage_open_qualification"
+  stage_not_qualified: "stage_not_qualified"
+  stage_won: "stage_won"
+
+synonyms_map:
+  # Common aliases for qualification stage
+  "open": "stage_open_qualification"
+  "qualification": "stage_open_qualification"
+  "new": "stage_open_qualification"
+  "qualifying": "stage_open_qualification"
+
+  # Common aliases for not qualified
+  "not_qualified": "stage_not_qualified"
+  "disqualified": "stage_not_qualified"
+  "rejected": "stage_not_qualified"
+  "lost": "stage_not_qualified"
+
+  # Common aliases for won
+  "won": "stage_won"
+  "closed_won": "stage_won"
+  "closed-won": "stage_won"
+  "success": "stage_won"
+  "complete": "stage_won"

@@ -1,0 +1,33 @@
+# UTM seeds with synonym mappings
+sources:
+  canonical:
+    utm_source_google: "utm_source_google"
+    utm_source_facebook: "utm_source_facebook"
+
+  synonyms_map:
+    "google": "utm_source_google"
+    "Google": "utm_source_google"
+    "google ads": "utm_source_google"
+    "google_ads": "utm_source_google"
+    "adwords": "utm_source_google"
+
+    "facebook": "utm_source_facebook"
+    "Facebook": "utm_source_facebook"
+    "fb": "utm_source_facebook"
+    "meta": "utm_source_facebook"
+
+mediums:
+  canonical:
+    utm_medium_cpc: "utm_medium_cpc"
+    utm_medium_organic: "utm_medium_organic"
+
+  synonyms_map:
+    "cpc": "utm_medium_cpc"
+    "CPC": "utm_medium_cpc"
+    "paid": "utm_medium_cpc"
+    "ppc": "utm_medium_cpc"
+
+    "organic": "utm_medium_organic"
+    "Organic": "utm_medium_organic"
+    "natural": "utm_medium_organic"
+    "seo": "utm_medium_organic"

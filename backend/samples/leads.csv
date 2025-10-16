@@ -1,0 +1,4 @@
+source_ptr,name,email,phone,stage,lost_reason,team,user,partner_email
+row_lead_1,Deck for Jane,jane@doe.example,612-555-1111,won,,sales,rep_jane,jane@doe.example
+row_lead_2,Old Lead,,612-555-2222,not_qualified,lost_no_response,sales,rep_john,
+row_lead_3,Active Lead,info@acme.example,612-555-0000,open,,enterprise,rep_mary,info@acme.example

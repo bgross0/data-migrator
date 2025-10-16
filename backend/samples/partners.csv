@@ -1,0 +1,4 @@
+source_ptr,name,email,phone
+row_partner_1,Acme Homes,info@acme.example,(612) 555-0000
+row_partner_2,Jane Doe,jane@doe.example,612-555-1111
+row_partner_3,Bob Smith,bob@smith.example,+1-612-555-2222

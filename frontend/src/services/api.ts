@@ -268,4 +268,37 @@ export const graphsApi = {
   },
 }
 
+// Templates API
+export const templatesApi = {
+  list: async (category?: string) => {
+    const response = await api.get('/templates', {
+      params: category ? { category } : {}
+    })
+    return response.data
+  },
+
+  get: async (templateId: string) => {
+    const response = await api.get(`/templates/${templateId}`)
+    return response.data
+  },
+
+  getCategories: async () => {
+    const response = await api.get('/templates/categories')
+    return response.data
+  },
+
+  getProgress: async (templateId: string) => {
+    const response = await api.get(`/templates/${templateId}/progress`)
+    return response.data
+  },
+
+  instantiate: async (templateId: string, datasetId?: number, customName?: string) => {
+    const response = await api.post(`/templates/${templateId}/instantiate`, {
+      datasetId,
+      customName
+    })
+    return response.data
+  },
+}
+
 export default api

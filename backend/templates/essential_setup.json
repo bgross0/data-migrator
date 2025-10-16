@@ -1,0 +1,51 @@
+{
+  "id": "template_essential_setup",
+  "name": "Essential Setup",
+  "description": "Core configuration data for a fresh Odoo 18 installation",
+  "category": "foundation",
+  "icon": "🏗️",
+  "estimatedTime": "5-10 minutes",
+  "difficulty": "beginner",
+  "prerequisites": [],
+  "models": [
+    "res.currency",
+    "res.country",
+    "res.country.state",
+    "res.users",
+    "res.company",
+    "uom.uom"
+  ],
+  "steps": [
+    {
+      "title": "Import Base Configuration",
+      "models": ["res.currency", "res.country", "res.country.state"],
+      "description": "Set up currencies and geographic data",
+      "optional": true,
+      "note": "Usually pre-configured in Odoo, only import if customizing"
+    },
+    {
+      "title": "Import Users",
+      "models": ["res.users"],
+      "description": "Create user accounts for your team",
+      "sampleHeaders": ["login", "name", "email", "groups_id", "active"]
+    },
+    {
+      "title": "Import Company Info",
+      "models": ["res.company"],
+      "description": "Configure your company details",
+      "sampleHeaders": ["name", "vat", "currency_id", "logo"]
+    },
+    {
+      "title": "Import Units of Measure",
+      "models": ["uom.uom"],
+      "description": "Custom units if needed",
+      "optional": true
+    }
+  ],
+  "metadata": {
+    "recommended_for": ["All new Odoo installations"],
+    "odoo_modules": ["base"],
+    "tags": ["setup", "configuration", "users", "company"],
+    "priority": 1
+  }
+}

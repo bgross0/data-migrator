@@ -1,0 +1,42 @@
+{
+  "id": "template_projects",
+  "name": "Project Management",
+  "description": "Import projects, tasks, and timesheets for project-based businesses",
+  "category": "projects",
+  "icon": "📋",
+  "estimatedTime": "10-20 minutes",
+  "difficulty": "beginner",
+  "prerequisites": ["res.partner"],
+  "models": [
+    "res.partner",
+    "project.project",
+    "project.task"
+  ],
+  "steps": [
+    {
+      "title": "Import Customers",
+      "models": ["res.partner"],
+      "description": "Import customers who will be linked to projects",
+      "note": "Skip if already completed in Sales & CRM template"
+    },
+    {
+      "title": "Import Projects",
+      "models": ["project.project"],
+      "description": "Import your project list with details",
+      "dependsOn": ["res.partner"],
+      "sampleHeaders": ["name", "partner_id", "date_start", "date", "user_id", "active"]
+    },
+    {
+      "title": "Import Tasks",
+      "models": ["project.task"],
+      "description": "Import tasks within projects",
+      "dependsOn": ["project.project"],
+      "sampleHeaders": ["name", "project_id", "user_id", "date_deadline", "priority", "stage_id"]
+    }
+  ],
+  "metadata": {
+    "recommended_for": ["Consulting firms", "Agencies", "Construction companies"],
+    "odoo_modules": ["project"],
+    "tags": ["projects", "tasks", "project-management"]
+  }
+}

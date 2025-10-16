@@ -1,0 +1,84 @@
+{
+  "id": "template_complete_migration",
+  "name": "Complete Business Migration",
+  "description": "Full data migration covering all major Odoo modules",
+  "category": "complete",
+  "icon": "🚀",
+  "estimatedTime": "2-4 hours",
+  "difficulty": "advanced",
+  "prerequisites": [],
+  "models": [
+    "res.currency",
+    "res.country",
+    "res.country.state",
+    "res.partner.industry",
+    "product.category",
+    "uom.uom",
+    "res.users",
+    "res.company",
+    "product.template",
+    "product.product",
+    "res.partner",
+    "crm.team",
+    "utm.source",
+    "utm.medium",
+    "utm.campaign",
+    "crm.lost.reason",
+    "crm.lead",
+    "mail.activity",
+    "project.project",
+    "sale.order",
+    "sale.order.line",
+    "account.move",
+    "account.analytic.line"
+  ],
+  "steps": [
+    {
+      "title": "Phase 1: Foundation",
+      "models": ["res.currency", "res.country", "res.country.state", "res.users", "res.company", "uom.uom"],
+      "description": "Set up basic configuration"
+    },
+    {
+      "title": "Phase 2: Master Data",
+      "models": ["product.category", "product.template", "product.product", "res.partner.industry", "res.partner"],
+      "description": "Import products and contacts",
+      "dependsOn": ["res.company"]
+    },
+    {
+      "title": "Phase 3: CRM & Marketing",
+      "models": ["crm.team", "utm.source", "utm.medium", "utm.campaign", "crm.lost.reason", "crm.lead"],
+      "description": "Import sales pipeline",
+      "dependsOn": ["res.partner"]
+    },
+    {
+      "title": "Phase 4: Projects",
+      "models": ["project.project", "mail.activity"],
+      "description": "Import projects and activities",
+      "dependsOn": ["res.partner"]
+    },
+    {
+      "title": "Phase 5: Sales Orders",
+      "models": ["sale.order", "sale.order.line"],
+      "description": "Import sales transactions",
+      "dependsOn": ["res.partner", "product.product"]
+    },
+    {
+      "title": "Phase 6: Accounting",
+      "models": ["account.move", "account.analytic.line"],
+      "description": "Import financial data",
+      "dependsOn": ["res.partner", "sale.order"]
+    }
+  ],
+  "metadata": {
+    "recommended_for": ["Businesses migrating from another ERP", "Complete system replacements"],
+    "odoo_modules": ["base", "crm", "sale", "project", "account"],
+    "tags": ["complete", "migration", "all-modules"],
+    "warnings": [
+      "Test thoroughly in a staging environment first",
+      "Plan for downtime during migration",
+      "Backup existing data before importing",
+      "Consider importing in phases over multiple days"
+    ],
+    "priority": 100
+  }
+}

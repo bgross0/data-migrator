@@ -1,0 +1,43 @@
+{
+  "id": "template_accounting",
+  "name": "Accounting & Invoicing",
+  "description": "Import invoices, bills, and accounting entries",
+  "category": "accounting",
+  "icon": "💰",
+  "estimatedTime": "20-40 minutes",
+  "difficulty": "intermediate",
+  "prerequisites": ["res.partner", "product.product"],
+  "models": [
+    "res.partner",
+    "product.template",
+    "product.product",
+    "account.move"
+  ],
+  "steps": [
+    {
+      "title": "Import Customers & Suppliers",
+      "models": ["res.partner"],
+      "description": "Import contacts for invoicing",
+      "note": "Ensure both customers and suppliers are included"
+    },
+    {
+      "title": "Import Products",
+      "models": ["product.template", "product.product"],
+      "description": "Import products/services for invoice lines",
+      "note": "Skip if already completed"
+    },
+    {
+      "title": "Import Invoices & Bills",
+      "models": ["account.move"],
+      "description": "Import customer invoices and vendor bills",
+      "dependsOn": ["res.partner", "product.product"],
+      "sampleHeaders": ["name", "move_type", "partner_id", "invoice_date", "invoice_date_due", "state", "amount_total"]
+    }
+  ],
+  "metadata": {
+    "recommended_for": ["All businesses with invoicing needs"],
+    "odoo_modules": ["account", "account_accountant"],
+    "tags": ["accounting", "invoices", "bills", "finance"],
+    "warnings": ["Ensure chart of accounts is configured before importing", "Test with draft invoices first"]
+  }
+}

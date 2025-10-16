@@ -13,6 +13,7 @@ from app.schemas.graph import (
     GraphValidation,
     GraphRunResponse
 )
+from typing import Dict, Any
 
 router = APIRouter()
 
@@ -187,5 +188,63 @@ async def get_run_status(run_id: str, db: Session = Depends(get_db)):
         "progress": run.progress,
         "logs": run.logs or [],
         "stats": run.stats,
-        "error_message": run.error_message
     }
+
+
+# Registry Integration Endpoints
+
+@router.post("/graphs/registry/{template_type}")
+async def create_registry_graph(template_type: str, db: Session = Depends(get_db)):
+    """Generate graph from registry template"""
+    service = GraphService(db)
+    
+    try:
+        graph = service.create_from_registry(template_type)
+        return GraphSpec(**graph.spec)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.get("/graphs/registry/templates")
+async def list_registry_templates(db: Session = Depends(get_db)):
+    """List available registry-based templates"""
+    service = GraphService(db)
+    templates = service.list_registry_templates()
+    
+    return {
+        "templates": templates,
+        "total": len(templates)
+    }
+
+
+@router.post("/graphs/{graph_id}/validate/registry")
+async def validate_graph_registry(graph_id: str, db: Session = Depends(get_db)):
+    """Validate graph against current registry"""
+    service = GraphService(db)
+    
+    try:
+        validation = service.validate_registry_compatibility(graph_id)
+        return validation
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.get("/graphs/registry/dependencies/{model_name}")
+async def get_registry_dependencies(model_name: str, db: Session = Depends(get_db)):
+    """Get dependency information for a specific model from registry"""
+    service = GraphService(db)
+    dependencies = service.get_registry_dependencies(model_name)
+    
+    if not dependencies["available"] and "error" in dependencies:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=dependencies["error"]
+        )
+
+    return dependencies

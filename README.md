@@ -2,6 +2,16 @@
 
 Intelligent data migration tool for importing messy spreadsheets into Odoo with automated column mapping, relationship resolution, and custom field generation.
 
+## 🤖 NEW: AI Assistant
+
+Data Migrator now includes an **AI assistant** powered by Claude Code and MCP! Get context-aware help with:
+- Field mapping suggestions based on your actual data
+- Odoo model explanations
+- Template recommendations
+- Data quality insights
+
+**Setup:** See [MCP_ASSISTANT_GUIDE.md](MCP_ASSISTANT_GUIDE.md) for full documentation.
+
 ## Architecture
 
 **Backend**: FastAPI + SQLAlchemy + SQLite

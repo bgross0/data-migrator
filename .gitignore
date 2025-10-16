@@ -19,61 +19,58 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
+
+# Virtual Environments
 venv/
-env/
 ENV/
+env/
 
-# FastAPI / SQLAlchemy
+# Database
 *.db
+*.sqlite
 *.sqlite3
-alembic.ini
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-*.cover
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.pnpm-store/
-
-# Frontend build
-frontend/dist/
-frontend/build/
-
-# Storage (local dev files)
-storage/uploads/*
-storage/profiles/*
-storage/addons/*
-storage/exports/*
-!storage/*/.gitkeep
 
 # Environment
 .env
 .env.local
-.env.*.local
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/mcp.json
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
-.DS_Store
-Thumbs.db
+# Frontend
+node_modules/
+.npm
+dist/
+build/
+
+# Storage
+storage/
+uploads/
+profiles/
+addons/
+exports/
 
 # Logs
 *.log
 logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# MCP Server (keep config, ignore venv)
+mcp-server/venv/

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "data-migrator": {
+      "command": "python3",
+      "args": ["mcp-server/server.py"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/mcp-server/venv/lib/python3.13/site-packages"
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import datasets, mappings, imports, health, sheets, addons, transforms, odoo, exports, operations, graphs, exceptions
+from app.api import datasets, mappings, imports, health, sheets, addons, transforms, odoo, exports, operations, graphs, exceptions, templates
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -31,6 +31,7 @@ app.include_router(exports.router, prefix=settings.API_V1_PREFIX, tags=["exports
 app.include_router(operations.router, prefix=settings.API_V1_PREFIX, tags=["operations"])
 app.include_router(graphs.router, prefix=settings.API_V1_PREFIX, tags=["graphs"])
 app.include_router(exceptions.router, prefix=settings.API_V1_PREFIX, tags=["exceptions"])
+app.include_router(templates.router, prefix=settings.API_V1_PREFIX, tags=["templates"])
 
 
 @app.get("/")

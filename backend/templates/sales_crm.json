@@ -1,0 +1,60 @@
+{
+  "id": "template_sales_crm",
+  "name": "Sales & CRM",
+  "description": "Import customers, leads, opportunities, and sales orders with products",
+  "category": "sales",
+  "icon": "📊",
+  "estimatedTime": "15-30 minutes",
+  "difficulty": "beginner",
+  "prerequisites": [],
+  "models": [
+    "res.partner",
+    "crm.team",
+    "utm.source",
+    "utm.medium",
+    "utm.campaign",
+    "crm.lost.reason",
+    "crm.lead",
+    "product.category",
+    "product.template",
+    "product.product",
+    "sale.order",
+    "sale.order.line"
+  ],
+  "steps": [
+    {
+      "title": "Import Customers & Contacts",
+      "models": ["res.partner"],
+      "description": "Import your customer database with contact information",
+      "sampleHeaders": ["name", "email", "phone", "street", "city", "state", "zip", "country"]
+    },
+    {
+      "title": "Import CRM Configuration",
+      "models": ["crm.team", "utm.source", "utm.medium", "utm.campaign", "crm.lost.reason"],
+      "description": "Set up sales teams and tracking parameters",
+      "optional": true
+    },
+    {
+      "title": "Import Leads & Opportunities",
+      "models": ["crm.lead"],
+      "description": "Import sales pipeline with leads and opportunities",
+      "dependsOn": ["res.partner"]
+    },
+    {
+      "title": "Import Products & Services",
+      "models": ["product.category", "product.template", "product.product"],
+      "description": "Import your product catalog"
+    },
+    {
+      "title": "Import Sales Orders",
+      "models": ["sale.order", "sale.order.line"],
+      "description": "Import historical sales orders",
+      "dependsOn": ["res.partner", "product.product"]
+    }
+  ],
+  "metadata": {
+    "recommended_for": ["Small businesses", "Service companies", "Retail"],
+    "odoo_modules": ["crm", "sale"],
+    "tags": ["sales", "crm", "customers", "products"]
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { datasetsApi } from '@/services/api'
+import QuickStart from '@/components/QuickStart'
 
 interface Dataset {
   id: number
@@ -52,6 +53,9 @@ export default function Dashboard() {
 
   return (
     <div>
+      {/* Quick Start Section */}
+      <QuickStart />
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Datasets</h1>
         <Link

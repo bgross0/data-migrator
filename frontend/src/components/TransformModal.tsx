@@ -409,7 +409,7 @@ export default function TransformModal({ mappingId, isOpen, onClose, onUpdate }:
                   </label>
                   <input
                     type={param.type === 'integer' ? 'number' : 'text'}
-                    value={params[param.name] ?? ''}
+                    value={String(params[param.name] ?? '')}
                     onChange={(e) => handleParamChange(param.name, e.target.value)}
                     className="w-full border border-gray-300 rounded px-3 py-2"
                     

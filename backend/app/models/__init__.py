@@ -3,6 +3,7 @@ from app.models.profile import ColumnProfile
 from app.models.mapping import Mapping, Transform, Relationship, ImportGraph
 from app.models.run import Run, RunLog, KeyMap, Suggestion
 from app.models.odoo_connection import OdooConnection
+from app.models.graph import Graph, GraphRun
 
 __all__ = [
     "SourceFile",
@@ -18,4 +19,6 @@ __all__ = [
     "KeyMap",
     "Suggestion",
     "OdooConnection",
+    "Graph",
+    "GraphRun",
 ]

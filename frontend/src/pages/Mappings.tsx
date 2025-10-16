@@ -321,15 +321,26 @@ export default function Mappings() {
           </Link>
           <h1 className="text-3xl font-bold">Configure Mappings: {dataset.name}</h1>
         </div>
-        {mappings.length === 0 && (
-          <button
-            onClick={generateMappings}
-            disabled={generating}
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {generating ? 'Generating...' : 'Generate Mappings'}
-          </button>
-        )}
+        <div className="flex gap-2">
+          {mappings.length > 0 && (
+            <Link
+              to={`/datasets/${id}/flow`}
+              className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 inline-flex items-center gap-2"
+            >
+              <span>📊</span>
+              View as Flow
+            </Link>
+          )}
+          {mappings.length === 0 && (
+            <button
+              onClick={generateMappings}
+              disabled={generating}
+              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
+            >
+              {generating ? 'Generating...' : 'Generate Mappings'}
+            </button>
+          )}
+        </div>
       </div>
 
       {mappings.length === 0 ? (

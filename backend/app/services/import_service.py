@@ -54,8 +54,15 @@ class ImportService:
         if not dataset:
             raise ValueError(f"Dataset {dataset_id} not found")
 
-        if not dataset.cleaned_file_path or not Path(dataset.cleaned_file_path).exists():
-            raise ValueError(f"Dataset {dataset_id} has no cleaned data. Run profiling first.")
+        # Determine which file to use (prefer cleaned, fall back to raw)
+        if dataset.cleaned_file_path and Path(dataset.cleaned_file_path).exists():
+            data_file_path = dataset.cleaned_file_path
+            logger.info(f"Using cleaned data from {data_file_path}")
+        elif dataset.source_file and dataset.source_file.path:
+            data_file_path = dataset.source_file.path
+            logger.warning(f"No cleaned data available, falling back to raw data from {data_file_path}")
+        else:
+            raise ValueError(f"Dataset {dataset_id} has no data file available.")
 
         # Get confirmed mappings
         mappings = self.db.query(Mapping).filter(
@@ -76,8 +83,8 @@ class ImportService:
         self.db.refresh(run)
 
         try:
-            # 1. Load cleaned data
-            data = self._load_cleaned_data(dataset.cleaned_file_path)
+            # 1. Load data (cleaned or raw)
+            data = self._load_data(data_file_path)
 
             # 2. Apply mappings to transform data
             mapped_data = self._apply_mappings(data, mappings)
@@ -102,20 +109,33 @@ class ImportService:
             self.db.commit()
             raise
 
-    def _load_cleaned_data(self, cleaned_file_path: str) -> Dict[str, pl.DataFrame]:
+    def _load_data(self, file_path_str: str) -> Dict[str, pl.DataFrame]:
         """
-        Load cleaned data from file using Polars.
+        Load data from file using Polars (works with both cleaned and raw files).
 
         Returns:
             Dict of {sheet_name: DataFrame}
         """
-        file_path = Path(cleaned_file_path)
+        file_path = Path(file_path_str)
 
-        if file_path.suffix.lower() in ['.csv', '.cleaned.csv']:
+        if file_path.suffix.lower() in ['.csv', '.cleaned.csv'] or '.csv' in file_path.name:
             return {'Sheet1': pl.read_csv(file_path)}
-        else:
+        elif file_path.suffix.lower() in ['.xlsx', '.xls'] or '.xlsx' in file_path.name or '.xls' in file_path.name:
             # Read all sheets from Excel
-            return pl.read_excel(file_path, sheet_id=None)
+            try:
+                return pl.read_excel(file_path, sheet_id=None)
+            except Exception as e:
+                # Fallback to pandas if Polars fails
+                logger.warning(f"Polars Excel read failed, trying pandas: {e}")
+                import pandas as pd
+                excel_file = pd.ExcelFile(file_path)
+                result = {}
+                for sheet_name in excel_file.sheet_names:
+                    df_pandas = pd.read_excel(excel_file, sheet_name=sheet_name)
+                    result[sheet_name] = pl.from_pandas(df_pandas)
+                return result
+        else:
+            raise ValueError(f"Unsupported file format: {file_path.suffix}")
 
     def _apply_mappings(self, data: Dict[str, pl.DataFrame], mappings: List[Mapping]) -> Dict[str, List[Dict]]:
         """

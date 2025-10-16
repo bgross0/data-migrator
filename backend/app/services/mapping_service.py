@@ -224,6 +224,10 @@ class MappingService:
                     # Get top suggestion
                     top_mapping = field_mappings[0]
 
+                    # Auto-confirm high confidence mappings (≥0.7)
+                    confidence_value = float(top_mapping.confidence) if top_mapping.confidence is not None else 0.0
+                    auto_confirm = confidence_value >= 0.7
+
                     # Create mapping record
                     # Convert numpy types to Python native types to avoid SQLAlchemy issues
                     mapping = Mapping(
@@ -232,9 +236,9 @@ class MappingService:
                         header_name=column_name,
                         target_model=top_mapping.target_model,
                         target_field=top_mapping.target_field,
-                        confidence=float(top_mapping.confidence) if top_mapping.confidence is not None else 0.0,
-                        status=MappingStatus.PENDING,
-                        chosen=False,
+                        confidence=confidence_value,
+                        status=MappingStatus.CONFIRMED if auto_confirm else MappingStatus.PENDING,
+                        chosen=auto_confirm,  # Auto-choose high confidence mappings
                         rationale=top_mapping.rationale,
                     )
 
@@ -263,16 +267,17 @@ class MappingService:
                     self.db.add(mapping)
                     self.db.flush()
 
-                    # Store all candidates as suggestions
+                    # Store all candidates as suggestions (Top 10 for two-tier system)
                     candidates = [
                         {
                             "model": fm.target_model,
                             "field": fm.target_field,
                             "confidence": float(fm.confidence) if fm.confidence is not None else 0.0,
+                            "confidence_tier": getattr(fm, "confidence_tier", "medium"),
                             "method": fm.matching_strategy,
                             "rationale": fm.rationale
                         }
-                        for fm in field_mappings[:5]  # Top 5
+                        for fm in field_mappings[:10]  # Top 10 (increased from 5)
                     ]
 
                     suggestion = Suggestion(

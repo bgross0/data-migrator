@@ -4,7 +4,7 @@ Intelligent data migration tool for importing messy spreadsheets into Odoo with 
 
 ## Architecture
 
-**Backend**: FastAPI + Celery + SQLAlchemy + Postgres + Redis
+**Backend**: FastAPI + SQLAlchemy + SQLite
 **Frontend**: React + Vite + Tailwind CSS
 **Data Processing**: Pandas, DuckDB, OpenPyXL
 **Matching**: rapidfuzz + optional Claude LLM
@@ -72,10 +72,9 @@ cp .env.example .env
 alembic upgrade head
 
 # Start API server
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8888
 
-# Start Celery worker (separate terminal)
-celery -A app.core.celery_app worker --loglevel=info
+
 ```
 
 ### Frontend Setup
@@ -89,11 +88,8 @@ npm run dev  # Starts on http://localhost:5173
 ## Environment Variables
 
 ```bash
-# Database
-DATABASE_URL=postgresql://user:pass@localhost/data_migrator
-
-# Redis (for Celery)
-REDIS_URL=redis://localhost:6379/0
+# Database (SQLite - no server needed)
+DATABASE_URL=sqlite:///./data_migrator.db
 
 # Odoo (optional for dev)
 ODOO_URL=https://your-odoo.com
@@ -136,8 +132,6 @@ STORAGE_PATH=./storage
 - FastAPI 0.115+
 - React 18+
 - Vite 6+
-- PostgreSQL 15+
-- Redis 7+
 
 ## License
 

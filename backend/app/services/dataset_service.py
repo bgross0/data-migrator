@@ -3,6 +3,7 @@ from fastapi import UploadFile
 from app.models import SourceFile, Dataset, Sheet, ColumnProfile
 from app.core.config import settings
 from app.core.profiler import ColumnProfiler
+from app.core.data_cleaner import clean_file
 from app.services.operation_tracker import OperationTracker
 import os
 from datetime import datetime
@@ -39,6 +40,7 @@ class DatasetService:
                 {"id": "save", "label": "Saving to storage", "status": "pending"},
                 {"id": "db_create", "label": "Creating database records", "status": "pending"},
                 {"id": "profile", "label": "Profiling columns", "status": "pending", "detail": "Detecting types and patterns"},
+                {"id": "clean", "label": "Cleaning data", "status": "pending", "detail": "Normalizing and standardizing"},
                 {"id": "finalize", "label": "Finalizing", "status": "pending"},
             ]
         )
@@ -105,10 +107,40 @@ class DatasetService:
             profiler = ColumnProfiler(str(file_path))
             profiles = profiler.profile()
 
-            tracker.set_progress(80)
+            tracker.set_progress(60)
             tracker.update_step("profile", "complete")
 
-            # Step 5: Finalize - Store column profiles
+            # Step 5: Clean data
+            tracker.update_step("clean", "in_progress", "Applying data cleaning transformations")
+            tracker.set_progress(65)
+
+            try:
+                # Apply data cleaning based on column profiles
+                cleaned_sheets, cleaning_report = clean_file(file_path, profiles)
+
+                # Save cleaned data
+                cleaned_path = self._save_cleaned_data(file_path, cleaned_sheets)
+
+                # Update dataset with cleaned data info
+                dataset.cleaned_file_path = str(cleaned_path)
+                dataset.cleaning_report = cleaning_report
+                self.db.commit()
+
+                tracker.update_step("clean", "complete")
+                tracker.set_progress(85)
+
+            except Exception as e:
+                # Log cleaning error but don't fail the upload
+                print(f"Data cleaning error (non-fatal): {e}")
+                dataset.cleaning_report = {
+                    "error": str(e),
+                    "status": "failed"
+                }
+                self.db.commit()
+                tracker.update_step("clean", "complete", "Skipped due to error")
+                tracker.set_progress(85)
+
+            # Step 6: Finalize - Store column profiles
             tracker.update_step("finalize", "in_progress", "Creating column profiles")
 
             for sheet_name, columns in profiles.items():
@@ -156,7 +188,7 @@ class DatasetService:
         self.db.refresh(dataset)
         return dataset, operation_id
 
-    def _save_cleaned_data(self, original_path: Path, cleaned_data: Dict) -> Path:
+    def _save_cleaned_data(self, original_path: Path, cleaned_data: Dict[str, pl.DataFrame]) -> Path:
         """
         Save cleaned data to disk alongside original file using Polars.
 
@@ -168,19 +200,25 @@ class DatasetService:
             Path to saved cleaned file
         """
         # Create cleaned filename (e.g., file.csv -> file.cleaned.csv)
-        cleaned_path = original_path.with_suffix(f'.cleaned{original_path.suffix}')
+        cleaned_path = original_path.with_stem(f"{original_path.stem}.cleaned")
 
         # Save based on file type
         if original_path.suffix.lower() == '.csv':
             # Single sheet for CSV
             if 'Sheet1' in cleaned_data:
                 cleaned_data['Sheet1'].write_csv(cleaned_path)
+            else:
+                # Fallback to first sheet
+                first_sheet = next(iter(cleaned_data.values()))
+                first_sheet.write_csv(cleaned_path)
         else:
-            # Multiple sheets for Excel - write each sheet separately
-            # Note: Polars write_excel can handle multiple sheets
-            with pl.ExcelWriter(cleaned_path) as writer:
+            # Multiple sheets for Excel
+            # Use pandas for now since Polars ExcelWriter has limitations
+            import pandas as pd
+            with pd.ExcelWriter(cleaned_path, engine='openpyxl') as writer:
                 for sheet_name, df in cleaned_data.items():
-                    df.write_excel(writer, worksheet=sheet_name)
+                    # Convert Polars to pandas for writing
+                    df.to_pandas().to_excel(writer, sheet_name=sheet_name, index=False)
 
         return cleaned_path
 

@@ -192,7 +192,7 @@ GET /api/v1/datasets/123/export/odoo-migrate/preview
 
 3. **Export:**
    ```bash
-   curl -X POST http://localhost:8000/api/v1/datasets/1/export/odoo-migrate \
+   curl -X POST http://localhost:8888/api/v1/datasets/1/export/odoo-migrate \
      -o export.zip
    ```
 

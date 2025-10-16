@@ -4,8 +4,6 @@
 
 - Python 3.12+
 - Node.js 20+
-- PostgreSQL 15+
-- Redis 7+
 
 ## Backend Setup
 
@@ -21,27 +19,13 @@ pip install -r requirements.txt
 
 # Set up environment
 cp .env.example .env
-# Edit .env with your database and Redis URLs
+# Edit .env with your Odoo settings (database is SQLite - no setup needed)
 
 # Run database migrations
 alembic upgrade head
 
 # Start FastAPI server
-uvicorn app.main:app --reload --port 8000
-```
-
-### Start Celery Worker (in separate terminal)
-
-```bash
-cd backend
-source venv/bin/activate
-celery -A app.core.celery_app worker --loglevel=info
-```
-
-### Start Celery Flower (monitoring, optional)
-
-```bash
-celery -A app.core.celery_app flower --port=5555
+uvicorn app.main:app --reload --port 8888
 ```
 
 ## Frontend Setup
@@ -60,18 +44,7 @@ Frontend will run on http://localhost:5173
 
 ## Database Setup
 
-### Create PostgreSQL Database
-
-```sql
-CREATE DATABASE data_migrator;
-CREATE USER data_migrator_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE data_migrator TO data_migrator_user;
-```
-
-Update your `backend/.env` file:
-```
-DATABASE_URL=postgresql://data_migrator_user:your_password@localhost:5432/data_migrator
-```
+The system uses SQLite (no server setup required). The database file is automatically created when you run migrations.
 
 ### Run Migrations
 
@@ -80,28 +53,7 @@ cd backend
 alembic upgrade head
 ```
 
-## Redis Setup
-
-If not installed:
-
-### Ubuntu/Debian
-```bash
-sudo apt update
-sudo apt install redis-server
-sudo systemctl start redis
-```
-
-### macOS
-```bash
-brew install redis
-brew services start redis
-```
-
-### Verify Redis
-```bash
-redis-cli ping
-# Should return: PONG
-```
+This will create the `data_migrator.db` file in the backend directory with all required tables.
 
 ## Project Status
 
@@ -135,17 +87,10 @@ Terminal 1 - Backend:
 ```bash
 cd backend
 source venv/bin/activate
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8888
 ```
 
-Terminal 2 - Celery Worker:
-```bash
-cd backend
-source venv/bin/activate
-celery -A app.core.celery_app worker --loglevel=info
-```
-
-Terminal 3 - Frontend:
+Terminal 2 - Frontend:
 ```bash
 cd frontend
 npm run dev
@@ -156,17 +101,17 @@ Visit http://localhost:5173
 ## Architecture Overview
 
 ```
-┌─────────────┐          ┌──────────────┐          ┌─────────┐
-│   React     │  HTTP    │   FastAPI    │  Tasks   │ Celery  │
-│  Frontend   ├─────────>│   Backend    ├─────────>│ Workers │
-│             │          │              │          │         │
-└─────────────┘          └──────┬───────┘          └────┬────┘
-                                │                        │
-                                v                        v
-                         ┌──────────────┐        ┌──────────┐
-                         │  PostgreSQL  │        │  Redis   │
-                         │   Database   │        │  Queue   │
-                         └──────────────┘        └──────────┘
+┌─────────────┐          ┌──────────────┐
+│   React     │  HTTP    │   FastAPI    │
+│  Frontend   ├─────────>│   Backend    │
+│             │          │              │
+└─────────────┘          └──────┬───────┘
+                                │
+                                v
+                         ┌──────────────┐
+                         │   SQLite     │
+                         │   Database   │
+                         └──────────────┘
                                 │
                                 v
                          ┌──────────────┐
@@ -179,13 +124,8 @@ Visit http://localhost:5173
 
 ### Backend won't start
 - Check DATABASE_URL in .env
-- Ensure PostgreSQL is running: `pg_isready`
-- Ensure Redis is running: `redis-cli ping`
+- Ensure SQLite file path is writable
 
 ### Frontend won't start
 - Delete node_modules and run `npm install` again
 - Check for port conflicts on 5173
-
-### Celery worker errors
-- Ensure Redis is running
-- Check REDIS_URL in .env matches your Redis setup

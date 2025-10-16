@@ -286,7 +286,7 @@ Beta Inc,Premium,Healthcare
 1. **Start data-migrator:**
    ```bash
    cd backend && source venv/bin/activate
-   uvicorn app.main:app --reload --port 8000
+   uvicorn app.main:app --reload --port 8888
    ```
 
 2. **Upload test CSV with many2many data:**

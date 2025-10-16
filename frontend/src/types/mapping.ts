@@ -29,6 +29,14 @@ export interface CustomFieldDefinition {
   related_model?: string
 }
 
+export interface Transform {
+  id: number
+  mapping_id: number
+  order: number
+  fn: string
+  params?: Record<string, any> | null
+}
+
 export interface Mapping {
   id: number
   dataset_id: number
@@ -41,6 +49,7 @@ export interface Mapping {
   chosen: boolean
   rationale: string | null
   suggestions: Suggestion[]
+  transforms?: Transform[]
   custom_field_definition?: CustomFieldDefinition
   lambda_function?: string
 }

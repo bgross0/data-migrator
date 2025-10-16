@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { datasetsApi, modulesApi, operationsApi } from '@/services/api'
 import StatusOverlay, { StatusStep } from '@/components/StatusOverlay'
 import ModuleSelector from '@/components/ModuleSelector'
+import SpreadsheetPreview from '@/components/SpreadsheetPreview'
 
 export default function Upload() {
   const [file, setFile] = useState<File | null>(null)
@@ -12,7 +13,8 @@ export default function Upload() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedModules, setSelectedModules] = useState<string[]>([])
   const [showModuleSelector, setShowModuleSelector] = useState(false)
-  
+  const [showPreview, setShowPreview] = useState(false)
+
   const navigate = useNavigate()
 
   const DEFAULT_UPLOAD_STEPS: StatusStep[] = [
@@ -54,6 +56,18 @@ export default function Upload() {
 
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
+  }
+
+  const handleFileSelected = () => {
+    if (file) {
+      setShowPreview(true)
+    }
+  }
+
+  const handleChangeFile = () => {
+    setShowPreview(false)
+    setFile(null)
+    setName('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -126,73 +140,126 @@ export default function Upload() {
       <div>
         <h1 className="text-3xl font-bold mb-6">Upload File</h1>
 
-        <div className="bg-white rounded-lg shadow p-8 max-w-2xl">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">
-                Dataset Name (optional)
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="My Dataset"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">
-                File (Excel or CSV)
-              </label>
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="w-full"
-                required
-              />
-            </div>
-
-            {/* Module Selection */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium">
-                  Odoo Modules (Optional)
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowModuleSelector(!showModuleSelector)}
-                  className="text-sm text-blue-600 hover:text-blue-700"
-                >
-                  {showModuleSelector ? 'Hide' : 'Show'} Module Selection
-                </button>
-              </div>
-              {selectedModules.length > 0 && (
-                <div className="text-sm text-gray-600 mb-2">
-                  {selectedModules.length} module{selectedModules.length !== 1 ? 's' : ''} selected
-                </div>
-              )}
-            </div>
-
-            {showModuleSelector && (
+        {!showPreview ? (
+          /* File Selection Form */
+          <div className="bg-white rounded-lg shadow p-8 max-w-2xl">
+            <form onSubmit={(e) => { e.preventDefault(); handleFileSelected(); }}>
               <div className="mb-6">
-                <ModuleSelector
-                  selectedModules={selectedModules}
-                  onModulesChange={setSelectedModules}
+                <label className="block text-sm font-medium mb-2">
+                  Dataset Name (optional)
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="My Dataset"
                 />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={!file || uploading}
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              {uploading ? 'Processing...' : 'Upload & Profile'}
-            </button>
-          </form>
-        </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">
+                  File (Excel or CSV)
+                </label>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  className="w-full"
+                  required
+                />
+              </div>
+
+              {/* Module Selection */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium">
+                    Odoo Modules (Optional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowModuleSelector(!showModuleSelector)}
+                    className="text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    {showModuleSelector ? 'Hide' : 'Show'} Module Selection
+                  </button>
+                </div>
+                {selectedModules.length > 0 && (
+                  <div className="text-sm text-gray-600 mb-2">
+                    {selectedModules.length} module{selectedModules.length !== 1 ? 's' : ''} selected
+                  </div>
+                )}
+              </div>
+
+              {showModuleSelector && (
+                <div className="mb-6">
+                  <ModuleSelector
+                    selectedModules={selectedModules}
+                    onModulesChange={setSelectedModules}
+                  />
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={!file}
+                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                Preview File
+              </button>
+            </form>
+          </div>
+        ) : (
+          /* Preview and Confirm */
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Preview Your File</h2>
+                <button
+                  onClick={handleChangeFile}
+                  className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                  </svg>
+                  Change File
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-4">
+                Review your data below to ensure the correct file was selected before uploading.
+              </p>
+
+              {file && <SpreadsheetPreview file={file} />}
+
+              <div className="mt-6 flex items-center justify-between">
+                <button
+                  onClick={handleChangeFile}
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={uploading}
+                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  {uploading ? 'Processing...' : 'Confirm & Upload'}
+                </button>
+              </div>
+            </div>
+
+            {/* Module Selection in Preview Mode */}
+            {selectedModules.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold mb-2">Selected Modules</h3>
+                <div className="text-sm text-gray-600">
+                  {selectedModules.join(', ')}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <StatusOverlay

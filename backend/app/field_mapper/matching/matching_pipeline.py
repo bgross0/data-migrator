@@ -80,7 +80,7 @@ class MatchingPipeline:
         all_column_profiles: List[ColumnProfile],
         target_models: Optional[Set[str]] = None,
         candidate_models: Optional[Set[str]] = None,
-        max_results: int = 5
+        max_results: Optional[int] = None
     ) -> List[FieldMapping]:
         """
         Find best field mappings for a column.
@@ -95,6 +95,10 @@ class MatchingPipeline:
         Returns:
             List of FieldMapping objects, sorted by confidence (highest first)
         """
+        # Use settings value if max_results not provided
+        if max_results is None:
+            max_results = self.settings.max_suggestions
+
         logger.info(f"Matching column: {column_profile.column_name}")
 
         # Create matching context
@@ -142,34 +146,47 @@ class MatchingPipeline:
         # Rank candidates
         ranked_candidates = self._rank_candidates(merged_candidates)
 
-        # Filter by confidence threshold
-        filtered_candidates = [
+        # Two-tier confidence system (use settings)
+        HIGH_CONFIDENCE = self.settings.high_confidence_threshold
+        MEDIUM_CONFIDENCE = self.settings.medium_confidence_threshold
+
+        # Filter by medium confidence threshold (more inclusive)
+        all_viable_candidates = [
             m for m in ranked_candidates
-            if m.confidence >= self.settings.confidence_threshold
+            if m.confidence >= MEDIUM_CONFIDENCE
         ]
 
         logger.info(
-            f"Candidates after confidence filter: {len(filtered_candidates)}"
+            f"Candidates after confidence filter (≥{MEDIUM_CONFIDENCE}): {len(all_viable_candidates)}"
         )
 
         # Return top N results with alternatives
-        if not filtered_candidates:
-            logger.warning(f"No confident matches found for {column_profile.column_name}")
+        if not all_viable_candidates:
+            logger.warning(f"No viable matches found for {column_profile.column_name}")
             return []
 
+        # Tag confidence tier for each candidate
+        for candidate in all_viable_candidates:
+            if candidate.confidence >= HIGH_CONFIDENCE:
+                candidate.confidence_tier = "high"
+            elif candidate.confidence >= MEDIUM_CONFIDENCE:
+                candidate.confidence_tier = "medium"
+            else:
+                candidate.confidence_tier = "low"
+
         # Best match
-        best_match = filtered_candidates[0]
+        best_match = all_viable_candidates[0]
 
         # Alternatives (remaining candidates)
-        best_match.alternatives = filtered_candidates[1:max_results]
+        best_match.alternatives = all_viable_candidates[1:max_results]
 
         logger.info(
             f"Best match for '{column_profile.column_name}': "
             f"{best_match.target_model}.{best_match.target_field} "
-            f"(confidence={best_match.confidence:.2f})"
+            f"(confidence={best_match.confidence:.2f}, tier={best_match.confidence_tier})"
         )
 
-        return filtered_candidates[:max_results]
+        return all_viable_candidates[:max_results]
 
     def match_sheet(
         self,

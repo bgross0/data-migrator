@@ -218,4 +218,54 @@ export const healthApi = {
   },
 }
 
+// Graphs API
+export const graphsApi = {
+  create: async (graphData: any) => {
+    const response = await api.post('/graphs', graphData)
+    return response.data
+  },
+
+  get: async (graphId: string) => {
+    const response = await api.get(`/graphs/${graphId}`)
+    return response.data
+  },
+
+  list: async (limit = 100, offset = 0) => {
+    const response = await api.get('/graphs', {
+      params: { limit, offset }
+    })
+    return response.data
+  },
+
+  update: async (graphId: string, graphData: any) => {
+    const response = await api.put(`/graphs/${graphId}`, graphData)
+    return response.data
+  },
+
+  delete: async (graphId: string) => {
+    const response = await api.delete(`/graphs/${graphId}`)
+    return response.data
+  },
+
+  validate: async (graphId: string) => {
+    const response = await api.post(`/graphs/${graphId}/validate`)
+    return response.data
+  },
+
+  run: async (graphId: string, datasetId?: number) => {
+    const response = await api.post(`/graphs/${graphId}/run`, { dataset_id: datasetId })
+    return response.data
+  },
+
+  getRuns: async (graphId: string) => {
+    const response = await api.get(`/graphs/${graphId}/runs`)
+    return response.data
+  },
+
+  getRunStatus: async (runId: string) => {
+    const response = await api.get(`/runs/${runId}`)
+    return response.data
+  },
+}
+
 export default api

@@ -2,9 +2,9 @@
 
 ## Overview
 
-Data Migrator is an intelligent data migration platform for importing messy spreadsheets into Odoo with automated column mapping, relationship resolution, and custom field generation. It uses a FastAPI backend with Celery workers, a React frontend, and integrates with Odoo via JSON-RPC.
+Data Migrator is an intelligent data migration platform for importing messy spreadsheets into Odoo with automated column mapping, relationship resolution, and custom field generation. It uses a FastAPI backend with synchronous processing, a React frontend, and integrates with Odoo via JSON-RPC.
 
-**Stack**: FastAPI + Celery + SQLAlchemy + Postgres + Redis + React + Vite + Tailwind CSS + Polars
+**Stack**: FastAPI + SQLAlchemy + SQLite + React + Vite + Tailwind CSS + Polars
 
 ## Backend Architecture
 
@@ -12,34 +12,17 @@ Data Migrator is an intelligent data migration platform for importing messy spre
 
 - **config.py** - Configuration management, loads from `.env` (database URLs, Odoo settings, API keys)
 - **database.py** - SQLAlchemy session management and dependency injection
-- **celery_app.py** - Celery configuration for async tasks
 - **profiler.py** - Column analysis: detects data types, quality metrics, null percentages
 - **lambda_transformer.py** - Advanced lambda-based data transformation system
-- **transformer.py** - Basic data cleaning and normalization (trim, lowercase, etc.)
-- **matcher.py** & **hybrid_matcher.py** - Header-to-Odoo field mapping using exact/fuzzy/AI matching
+- **matcher.py** & **hybrid_matcher.py** - Header-to-Odoo field mapping using exact/fuzzy matching
 - **odoo_field_mappings.py** - Comprehensive Odoo module field definitions
-- **field_detector.py** - Field type detection and validation
 
-### **Field Mapper System (`/backend/app/field_mapper/`)**
+### **Import System Components**
 
-**Sophisticated deterministic field mapping engine:**
+**These components exist as infrastructure but are currently used in test environments:**
 
-- **main.py** - `DeterministicFieldMapper` class with Polars integration
-- **core/** - Knowledge base, data structures, pipeline orchestration
-- **profiling/** - `ColumnProfiler` analyzes data patterns and characteristics  
-- **matching/** - Multi-strategy matching pipeline (exact, fuzzy, AI-powered)
-- **config/** - Settings management for matching algorithms
-- **executor/** - Pipeline execution and result coordination
-
-### **Data Cleaning System (`/backend/app/cleaners/`)**
-
-**Rule-based data cleaning with Polars:**
-
-- **base.py** - Abstract `CleaningRule` class and `CleaningResult` data structures
-- **data_cleaner.py** - Orchestrates multiple cleaning rules with priority-based execution
-- **rules/** - Specific cleaning rules: header detection, whitespace, HTML entities, column names
-- **config.py** - Cleaning configuration and rule settings
-- **report.py** - Generates cleaning reports and change logs
+- **Field Mapper System (`/backend/app/field_mapper/`)** - Sophisticated deterministic field mapping engine with Polars integration
+- **Data Cleaning System (`/backend/app/cleaners/`)** - Rule-based data cleaning with Polars (test-only)
 
 ### **Import System (`/backend/app/importers/`)**
 
@@ -50,16 +33,19 @@ Data Migrator is an intelligent data migration platform for importing messy spre
 
 ### **Services Layer (`/backend/app/services/`)**
 
-**Business logic orchestration:**
+**Active business logic orchestration:**
 
-- **dataset_service.py** - Dataset CRUD operations and file management
-- **mapping_service.py** - Field mapping CRUD with AI/fuzzy matching suggestions
-- **import_service.py** - Import orchestration with the two-phase executor
+- **dataset_service.py** - Dataset CRUD operations and file management with synchronous profiling
+- **mapping_service.py** - Field mapping CRUD with basic matching suggestions
+- **import_service.py** - Import orchestration with synchronous execution
 - **transform_service.py** - Transform application and chain management
-- **odoo_migrate_export.py** - **NEW**: Export bridge to odoo-migrate format (ZIP generation)
-- **operation_tracker.py** - Tracks operations and provides real-time status
-- **profiler_tasks.py**, **import_tasks.py** - Celery async task definitions
+- **odoo_migrate_export.py** - Export bridge to odoo-migrate format (ZIP generation)
+- **operation_tracker.py** - Real-time operation tracking with SQLite storage
 - **odoo_field_service.py** - Odoo field discovery and metadata
+- **graph_service.py** - Graph specification management and visualization
+
+**Supporting Infrastructure (Celery tasks exist but not actively used):**
+- **profiler_tasks.py**, **import_tasks.py** - Async task definitions (infrastructure only)
 
 ### **API Layer (`/backend/app/api/`)**
 
@@ -131,11 +117,11 @@ Data Migrator is an intelligent data migration platform for importing messy spre
 - Used in cleaners, field mapper, and profiling systems
 - Replaces pandas for better performance with large datasets
 
-### **Celery Async Pipeline**
+### **Synchronous Execution Pipeline**
 
-- Long-running profiling operations
-- Background import execution  
-- Real-time status updates via task tracking
+- Direct service calls for profiling and import
+- Real-time progress tracking via OperationTracker polling  
+- No background worker processes (simpler deployment)
 
 ### **Two-Phase Import Graph**
 
@@ -150,25 +136,22 @@ Topological ordering ensures dependency resolution:
 - Generates ZIP with YAML configs, cleaned CSVs, and lookup tables
 - Applies transforms during export, produces clean data for odoo-migrate
 
-## Data Flow Pipeline
+## Actual Data Flow Pipeline
 
 ```
-Upload → Profile → Map/Suggest → Clean/Transform → Preview/Validate → Import/Export
-     │        │          │             │                │              │
-  File     Analysis   Field Mapping  Data Cleaning    Validation   Final Phase
-Storage   (Polars)   (AI/Fuzzy)     (Polars Rules)   (Graph)  (Import/Export)
+Upload → Profile (Sync) → Map (Basic) → Transform (Lambda) → Export/Import (Sync)
+      │         │            │               │                   │
+  File    Column Profiling  Header Mapping  Lambda Expressions   Final Output
+Storage     (Polars)     (Basic/Fuzzy)        (Polars)       (Import/Export)
 ```
 
-## Core Import Pipeline
+## Core Working Pipeline
 
-1. **Upload & Profile** → User uploads spreadsheet → Celery task analyzes columns (data types, patterns, quality metrics)
-2. **Match & Map** → HeaderMatcher suggests Odoo field mappings using exact/fuzzy/AI matching
-3. **Transform** → Apply data cleaning rules (trim, normalize phones/emails, split names, etc.)
-4. **Resolve Relationships** → ImportGraph determines topological order (parents before children)
-5. **Two-Phase Import** → TwoPhaseImporter executes:
-   - Phase A: Import parent entities, build KeyMap (source_value → odoo_id)
-   - Phase B: Import children using KeyMap for foreign key resolution
-6. **Audit & Rollback** → Run tracking with logs; selective rollback via KeyMap
+1. **Upload & Profile (Synchronous)** → User uploads spreadsheet → Service directly calls ColumnProfiler
+2. **Match & Map (Basic)** → HeaderMatcher suggests mappings using exact/fuzzy patterns
+3. **Transform (Lambda)** → Apply lambda expressions through LambdaTransformer
+4. **Import/Export (Synchronous)** → Direct execution through services
+5. **Track (Real-time)** → OperationTracker provides progress updates via polling
 
 ## KeyMap System
 
@@ -213,25 +196,19 @@ Standard topological order (defined in `graph.py:from_default()`):
 - Auto-generate from model changes: `alembic revision --autogenerate -m "description"`
 - Models must be imported in `alembic/env.py` for autogenerate to work
 
-### Celery Task Pattern
+### Direct Service Call Pattern
 
-Tasks are defined in `/services/*_tasks.py` and registered with Celery:
-
-```python
-from app.core.celery_app import celery
-
-@celery.task
-def profile_dataset(dataset_id: int):
-    # Long-running profiling work
-    pass
-```
-
-API routes trigger tasks asynchronously:
+Services are called directly from API routes without background tasks:
 
 ```python
-task = profile_dataset.delay(dataset_id)
-return {"task_id": task.id}
+@router.post("/datasets/upload")
+async def upload_dataset(file: UploadFile, db: Session = Depends(get_db)):
+    service = DatasetService(db)
+    dataset, operation_id = await service.create_from_upload(file)
+    return {"dataset_id": dataset.id, "operation_id": operation_id}
 ```
+
+Progress tracking happens through OperationTracker with SQLite storage.
 
 ### Odoo JSON-RPC Integration
 
@@ -267,11 +244,8 @@ Available transforms: `trim`, `lower`, `upper`, `titlecase`, `phone_normalize`, 
 Required variables in `backend/.env`:
 
 ```bash
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/data_migrator
-
-# Redis (for Celery)
-REDIS_URL=redis://localhost:6379/0
+# Database (SQLite - no server needed)
+DATABASE_URL=sqlite:///./data_migrator.db
 
 # Odoo (configure for actual imports)
 ODOO_URL=https://your-odoo.com
@@ -302,10 +276,8 @@ alembic upgrade head                    # Apply all migrations
 alembic revision -m "description"       # Create new migration
 alembic downgrade -1                    # Rollback one migration
 
-# Run development servers
-uvicorn app.main:app --reload --port 8000              # Start API (http://localhost:8000)
-celery -A app.core.celery_app worker --loglevel=info   # Start Celery worker (separate terminal)
-celery -A app.core.celery_app flower --port=5555       # Start Flower monitoring (optional)
+# Run development server
+uvicorn app.main:app --reload --port 8888              # Start API (http://localhost:8888)
 
 # Testing (when tests exist)
 pytest                                  # Run all tests
@@ -327,15 +299,14 @@ npm run lint      # Run ESLint
 
 ### Database Setup
 
-Requires PostgreSQL 15+ and Redis 7+. Configure in `backend/.env`.
+Uses SQLite (no server setup needed). Configure in `backend/.env`.
 
 ## Common Gotchas
 
-- **Celery not picking up tasks**: Restart the Celery worker after code changes
 - **Alembic can't find models**: Ensure models are imported in `alembic/env.py`
 - **KeyMap lookups failing**: Verify parent records were imported in phase A before children in phase B
 - **Odoo connection errors**: Check `ODOO_URL`, `ODOO_DB`, credentials in `.env`
-- **Frontend API calls failing**: Backend must be running on port 8000, frontend expects `/api/v1` prefix
+- **Frontend API calls failing**: Backend must be running on port 8888, frontend expects `/api/v1` prefix
 - **Storage path issues**: Ensure `storage/` directory exists with subdirs: `uploads/`, `profiles/`, `addons/`, `exports/`
 
 ## Code Style Notes

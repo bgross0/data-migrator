@@ -26,10 +26,11 @@ class FieldMapperSettings(BaseSettings):
     timeout_seconds: float = 60.0
     match_timeout_ms: float = 1000.0  # 1 second per column
 
-    # Matching configuration
-    confidence_threshold: float = 0.6
-    high_confidence_threshold: float = 0.8
-    max_suggestions: int = 5
+    # Matching configuration - Two-Tier Confidence System
+    high_confidence_threshold: float = 0.7  # Auto-confirm mappings
+    medium_confidence_threshold: float = 0.4  # Suggest for review
+    confidence_threshold: float = 0.4  # Minimum to show (legacy compatibility)
+    max_suggestions: int = 10  # Increased from 5 to store more alternatives
     sample_size: int = 1000  # Max rows to sample for profiling
 
     # Strategy weights (tuned based on validation results 2025-10-11)

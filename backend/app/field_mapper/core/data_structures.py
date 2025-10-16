@@ -221,6 +221,7 @@ class FieldMapping:
         target_model: Target Odoo model
         target_field: Target Odoo field
         confidence: Confidence score (0.0 to 1.0)
+        confidence_tier: Confidence tier ("high" ≥0.7, "medium" ≥0.4, "low" <0.4)
         scores: Breakdown of scores from different strategies
         rationale: Explanation for the mapping
         matching_strategy: Strategy that produced this mapping
@@ -234,6 +235,7 @@ class FieldMapping:
     target_model: str
     target_field: Optional[str]
     confidence: float
+    confidence_tier: str = "medium"  # NEW: "high", "medium", "low"
     scores: Dict[str, float] = field(default_factory=dict)
     rationale: str = ""
     matching_strategy: str = ""

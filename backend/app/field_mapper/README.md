@@ -98,36 +98,36 @@ cd app/field_mapper
 python -m api.app
 
 # Or with uvicorn
-uvicorn app.field_mapper.api.app:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.field_mapper.api.app:app --reload --host 0.0.0.0 --port 8888
 ```
 
 #### API Endpoints
 
 **Health Check**
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8888/health
 ```
 
 **Map a File**
 ```bash
-curl -X POST http://localhost:8000/api/v1/map \
+curl -X POST http://localhost:8888/api/v1/map \
   -F "file=@customer_data.xlsx" \
   -F "sheet_name=Customers"
 ```
 
 **Get All Models**
 ```bash
-curl http://localhost:8000/api/v1/models
+curl http://localhost:8888/api/v1/models
 ```
 
 **Get Fields for a Model**
 ```bash
-curl http://localhost:8000/api/v1/models/res.partner/fields
+curl http://localhost:8888/api/v1/models/res.partner/fields
 ```
 
 **Validate Mappings**
 ```bash
-curl -X POST http://localhost:8000/api/v1/validate \
+curl -X POST http://localhost:8888/api/v1/validate \
   -H "Content-Type: application/json" \
   -d '{
     "mappings": {...},
@@ -372,4 +372,4 @@ The system is designed to be extensible:
 For issues and questions:
 - GitHub Issues: [link]
 - Documentation: [link]
-- API Docs: http://localhost:8000/docs (when running)
+- API Docs: http://localhost:8888/docs (when running)

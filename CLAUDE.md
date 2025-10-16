@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Data Migrator is an intelligent data migration platform for importing messy spreadsheets into Odoo with automated column mapping, relationship resolution, and custom field generation. It uses a FastAPI backend with Celery workers, a React frontend, and integrates with Odoo via JSON-RPC.
 
-**Stack**: FastAPI + Celery + SQLAlchemy + Postgres + Redis + React + Vite + Tailwind CSS
+**Stack**: FastAPI + SQLAlchemy + SQLite + React + Vite + Tailwind CSS
 
 ## Development Commands
 
@@ -21,10 +21,8 @@ alembic upgrade head                    # Apply all migrations
 alembic revision -m "description"       # Create new migration
 alembic downgrade -1                    # Rollback one migration
 
-# Run development servers
-uvicorn app.main:app --reload --port 8000              # Start API (http://localhost:8000)
-celery -A app.core.celery_app worker --loglevel=info   # Start Celery worker (separate terminal)
-celery -A app.core.celery_app flower --port=5555       # Start Flower monitoring (optional)
+# Run development server
+uvicorn app.main:app --reload --port 8888              # Start API (http://localhost:8888)
 
 # Testing (when tests exist)
 pytest                                  # Run all tests
@@ -46,11 +44,10 @@ npm run lint      # Run ESLint
 
 ### Database Setup
 
-Requires PostgreSQL 15+ and Redis 7+. Configure in `backend/.env`:
+Uses SQLite (no server setup needed). Configure in `backend/.env`:
 
 ```bash
-DATABASE_URL=postgresql://user:pass@localhost:5432/data_migrator
-REDIS_URL=redis://localhost:6379/0
+DATABASE_URL=sqlite:///./data_migrator.db
 ```
 
 ## Architecture & Data Flow
@@ -160,25 +157,7 @@ Standard topological order (defined in `graph.py:from_default()`):
 - Auto-generate from model changes: `alembic revision --autogenerate -m "description"`
 - Models must be imported in `alembic/env.py` for autogenerate to work
 
-### Celery Task Pattern
 
-Tasks are defined in `/services/*_tasks.py` and registered with Celery:
-
-```python
-from app.core.celery_app import celery
-
-@celery.task
-def profile_dataset(dataset_id: int):
-    # Long-running profiling work
-    pass
-```
-
-API routes trigger tasks asynchronously:
-
-```python
-task = profile_dataset.delay(dataset_id)
-return {"task_id": task.id}
-```
 
 ### Odoo JSON-RPC Integration
 
@@ -214,11 +193,8 @@ Available transforms: `trim`, `lower`, `upper`, `titlecase`, `phone_normalize`, 
 Required variables in `backend/.env`:
 
 ```bash
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/data_migrator
-
-# Redis (for Celery)
-REDIS_URL=redis://localhost:6379/0
+# Database (SQLite - no server needed)
+DATABASE_URL=sqlite:///./data_migrator.db
 
 # Odoo (configure for actual imports)
 ODOO_URL=https://your-odoo.com
@@ -264,11 +240,10 @@ State management: Zustand for global state, React Query for server state
 
 ## Common Gotchas
 
-- **Celery not picking up tasks**: Restart the Celery worker after code changes
 - **Alembic can't find models**: Ensure models are imported in `alembic/env.py`
 - **KeyMap lookups failing**: Verify parent records were imported in phase A before children in phase B
 - **Odoo connection errors**: Check `ODOO_URL`, `ODOO_DB`, credentials in `.env`
-- **Frontend API calls failing**: Backend must be running on port 8000, frontend expects `/api/v1` prefix
+- **Frontend API calls failing**: Backend must be running on port 8888, frontend expects `/api/v1` prefix
 - **Storage path issues**: Ensure `storage/` directory exists with subdirs: `uploads/`, `profiles/`, `addons/`, `exports/`
 
 ## Code Style Notes

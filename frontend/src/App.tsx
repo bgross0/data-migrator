@@ -6,6 +6,7 @@ import DatasetDetail from './pages/DatasetDetail'
 import Mappings from './pages/Mappings'
 import Import from './pages/Import'
 import Runs from './pages/Runs'
+import FlowView from './pages/FlowView'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="upload" element={<Upload />} />
         <Route path="datasets/:id" element={<DatasetDetail />} />
         <Route path="datasets/:id/mappings" element={<Mappings />} />
+        <Route path="datasets/:id/flow" element={<FlowView />} />
         <Route path="datasets/:id/import" element={<Import />} />
         <Route path="runs" element={<Runs />} />
       </Route>

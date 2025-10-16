@@ -1,0 +1,191 @@
+"""
+API routes for GraphSpec management
+"""
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
+from app.core.database import get_db
+from app.services.graph_service import GraphService
+from app.schemas.graph import (
+    GraphSpec,
+    GraphSpecCreate,
+    GraphSpecUpdate,
+    GraphValidation,
+    GraphRunResponse
+)
+
+router = APIRouter()
+
+
+@router.post("/graphs", response_model=GraphSpec, status_code=status.HTTP_201_CREATED)
+async def create_graph(graph_create: GraphSpecCreate, db: Session = Depends(get_db)):
+    """Create a new graph definition"""
+    service = GraphService(db)
+    graph = service.create_graph(graph_create)
+
+    return GraphSpec(**graph.spec)
+
+
+@router.get("/graphs/{graph_id}", response_model=GraphSpec)
+async def get_graph(graph_id: str, db: Session = Depends(get_db)):
+    """Get a graph by ID"""
+    service = GraphService(db)
+    graph = service.get_graph(graph_id)
+
+    if not graph:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Graph {graph_id} not found"
+        )
+
+    return GraphSpec(**graph.spec)
+
+
+@router.get("/graphs", response_model=List[GraphSpec])
+async def list_graphs(limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
+    """List all graphs"""
+    service = GraphService(db)
+    graphs = service.list_graphs(limit=limit, offset=offset)
+
+    return [GraphSpec(**g.spec) for g in graphs]
+
+
+@router.put("/graphs/{graph_id}", response_model=GraphSpec)
+async def update_graph(
+    graph_id: str,
+    graph_update: GraphSpecUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update an existing graph"""
+    service = GraphService(db)
+    graph = service.update_graph(graph_id, graph_update)
+
+    if not graph:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Graph {graph_id} not found"
+        )
+
+    return GraphSpec(**graph.spec)
+
+
+@router.delete("/graphs/{graph_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_graph(graph_id: str, db: Session = Depends(get_db)):
+    """Delete a graph"""
+    service = GraphService(db)
+    success = service.delete_graph(graph_id)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Graph {graph_id} not found"
+        )
+
+
+@router.post("/graphs/{graph_id}/validate", response_model=GraphValidation)
+async def validate_graph(graph_id: str, db: Session = Depends(get_db)):
+    """Validate a graph for correctness"""
+    service = GraphService(db)
+    graph = service.get_graph(graph_id)
+
+    if not graph:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Graph {graph_id} not found"
+        )
+
+    graph_spec = GraphSpec(**graph.spec)
+    validation = service.validate_graph(graph_spec)
+
+    return validation
+
+
+@router.post("/graphs/{graph_id}/run", response_model=GraphRunResponse)
+async def run_graph(
+    graph_id: str,
+    dataset_id: int = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Execute a graph (enqueue Celery task)
+    TODO: Implement actual Celery task execution
+    """
+    service = GraphService(db)
+    graph = service.get_graph(graph_id)
+
+    if not graph:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Graph {graph_id} not found"
+        )
+
+    # Validate first
+    graph_spec = GraphSpec(**graph.spec)
+    validation = service.validate_graph(graph_spec)
+
+    if not validation.valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Graph validation failed: {validation.errors}"
+        )
+
+    # Create run record
+    run = service.create_run(graph_id, dataset_id)
+
+    # TODO: Enqueue Celery task here
+    # from app.tasks.graph_tasks import execute_graph
+    # task = execute_graph.delay(run.id)
+
+    return GraphRunResponse(
+        id=run.id,
+        status=run.status,
+        message="Graph execution queued"
+    )
+
+
+@router.get("/graphs/{graph_id}/runs")
+async def list_graph_runs(graph_id: str, db: Session = Depends(get_db)):
+    """List all runs for a graph"""
+    service = GraphService(db)
+    runs = service.list_runs(graph_id=graph_id)
+
+    return [
+        {
+            "id": run.id,
+            "graph_id": run.graph_id,
+            "dataset_id": run.dataset_id,
+            "status": run.status,
+            "started_at": run.started_at.isoformat() if run.started_at else None,
+            "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+            "progress": run.progress,
+            "logs": run.logs or [],
+            "stats": run.stats
+        }
+        for run in runs
+    ]
+
+
+@router.get("/runs/{run_id}")
+async def get_run_status(run_id: str, db: Session = Depends(get_db)):
+    """Get status of a specific run"""
+    service = GraphService(db)
+    run = service.get_run(run_id)
+
+    if not run:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Run {run_id} not found"
+        )
+
+    return {
+        "id": run.id,
+        "graph_id": run.graph_id,
+        "dataset_id": run.dataset_id,
+        "status": run.status,
+        "started_at": run.started_at.isoformat() if run.started_at else None,
+        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+        "progress": run.progress,
+        "logs": run.logs or [],
+        "stats": run.stats,
+        "error_message": run.error_message
+    }

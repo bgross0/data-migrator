@@ -2,14 +2,17 @@
 Export API endpoints for converting datasets to external formats.
 """
 
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.services.odoo_migrate_export import OdooMigrateExportService
-from app.services.export_service import ExportService
+from app.services.export_service import ExportService, ExportResult
+from app.services.graph_execute_service import GraphExecuteService
 from app.schemas.export import ExportResponse
+from app.models.graph import GraphRun
 
 router = APIRouter()
 
@@ -115,12 +118,17 @@ async def preview_export(
 @router.post("/datasets/{dataset_id}/export-for-odoo", response_model=ExportResponse)
 def export_for_odoo(
     dataset_id: int,
+    graph_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     """
     Export dataset to deterministic Odoo CSV format.
 
-    This is the main export endpoint for the deterministic pipeline:
+    OPTIONS:
+    - Legacy mode: Fixed registry-based export (if graph_id is None)
+    - Graph mode: Execute using graph-driven workflow (if graph_id is provided)
+
+    Legacy Mode:
     1. Validates data against registry specs
     2. Tracks exceptions (bad rows never block good rows)
     3. Generates deterministic external IDs with dedup tracking
@@ -128,34 +136,67 @@ def export_for_odoo(
     5. Emits CSVs in correct import order (parents before children)
     6. Returns ZIP with all CSVs + exception summary
 
+    Graph Mode:
+    1. Execute nodes topologically with real-time progress
+    2. Handle failures gracefully (continue on node failures)
+    3. Skip problematic nodes but complete remaining pipeline
+    4. Real-time progress tracking per node
+    5. Node-level validation and error handling
+
     Returns:
     - ZIP file path with CSVs ready for Odoo import
     - Per-model counts (rows emitted, exceptions)
     - Exception summary by error code
-
-    Use GET /datasets/{dataset_id}/exceptions to view detailed errors.
+    - Execution progress tracking
     """
     try:
-        service = ExportService(db)
-        result = service.export_to_odoo_csv(dataset_id)
+        # Check if graph_id provided for graph-driven execution
+        if graph_id is not None:
+            # Use new graph-driven execution
+            service = GraphExecuteService(db)
+            result = service.execute_graph_export(dataset_id, graph_id)
+        else:
+            # Use legacy export service
+            service = ExportService(db)
+            result = service.export_to_odoo_csv(dataset_id)
 
-        # Convert dataclass to dict for Pydantic
+        # Convert to ExportResponse format
+        if isinstance(result, ExportResult):
+            models = result.models
+            total_emitted = result.total_emitted
+            total_exceptions = result.total_exceptions
+        else:
+            # Handle case where service returns RunResponse
+            run = None
+            if hasattr(result, 'id'):
+                run = db.query(GraphRun).filter(GraphRun.id == result.id).first()
+            
+            models = []
+            if run and run.metadata:
+                for model_name in run.metadata.get("executed_models", []):
+                    model_summary = {
+                        "model": model_name,
+                        "csv_filename": f"{model_name}.csv",
+                        "rows_emitted": run.metadata.get(f"{model_name}_rows_emitted", 0),
+                        "exceptions_count": run.metadata.get(f"{model_name}_exceptions_count", 0)
+                    }
+                    models.append(model_summary)
+                
+            total_emitted = run.metadata.get("total_emitted", 0) if run else 0
+            total_exceptions = len(run.metadata.get("failed_nodes", [])) if run else 0
+            error_message = run.error_message if run else None
+        
         return ExportResponse(
-            dataset_id=result.dataset_id,
-            zip_path=result.zip_path,
-            models=[
-                {
-                    "model": m.model,
-                    "csv_filename": m.csv_filename,
-                    "rows_emitted": m.rows_emitted,
-                    "exceptions_count": m.exceptions_count,
-                }
-                for m in result.models
-            ],
-            total_emitted=result.total_emitted,
-            total_exceptions=result.total_exceptions,
-            exceptions_by_code=result.exceptions_by_code,
-            message=f"Exported {result.total_emitted} rows across {len(result.models)} models. {result.total_exceptions} exceptions tracked.",
+            dataset_id=dataset_id, 
+            zip_path=result.zip_path if hasattr(result, 'zip_path') else "",
+            models=models,
+            total_emitted=total_emitted,
+            total_exceptions=total_exceptions,
+            exceptions_by_code=result.exceptions_by_code if hasattr(result, 'exceptions_by_code') else {},
+            message=error_message or "Export completed",
+            current_node=run.current_node if run else None,
+            progress=run.progress if run else 0,
+            metadata=run.metadata or {}
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

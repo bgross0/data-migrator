@@ -1,9 +1,10 @@
 """
 Service for managing GraphSpec definitions and execution
 """
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
+from pathlib import Path
 from sqlalchemy.orm import Session
 from app.models.graph import Graph, GraphRun
 from app.schemas.graph import GraphSpec, GraphSpecCreate, GraphSpecUpdate, GraphValidation, ValidationError, ValidationWarning
@@ -263,3 +264,113 @@ class GraphService:
         self.db.commit()
         self.db.refresh(run)
         return run
+
+    # Registry Integration Methods
+    def create_from_registry(self, template_type: str, created_by: Optional[str] = None) -> Graph:
+        """Generate graph directly from registry template"""
+        from app.registry.loader import RegistryLoader
+
+        registry_path = Path(__file__).parent.parent.parent / "registry" / "odoo.yaml"
+        loader = RegistryLoader(registry_path)
+        
+        try:
+            graph_spec = loader.create_migration_template(template_type)
+            
+            graph_id = f"registry-{template_type}-{uuid.uuid4().hex[:8]}"
+            
+            spec_dict = graph_spec.model_dump()
+            
+            graph = Graph(
+                id=graph_id,
+                name=graph_spec.name,
+                version=1,
+                spec=spec_dict,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+                created_by=created_by
+            )
+
+            self.db.add(graph)
+            self.db.commit()
+            self.db.refresh(graph)
+            return graph
+            
+        except Exception as e:
+            raise ValueError(f"Failed to create graph from registry template {template_type}: {str(e)}")
+
+    def validate_registry_compatibility(self, graph_id: str) -> GraphValidation:
+        """Validate graph against current registry"""
+        from app.registry.loader import RegistryLoader
+
+        registry_path = Path(__file__).parent.parent.parent / "registry" / "odoo.yaml"
+        loader = RegistryLoader(registry_path)
+        registry = loader.load()
+        
+        graph = self.get_graph(graph_id)
+        if not graph:
+            raise ValueError(f"Graph {graph_id} not found")
+            
+        graph_spec = GraphSpec(**graph.spec)
+        
+        errors = []
+        warnings = []
+        
+        # Check if all models in graph exist in registry
+        for node in graph_spec.nodes:
+            if node.data and node.data.odooModel:
+                if node.data.odooModel not in registry.models:
+                    errors.append(ValidationError(
+                        nodeId=node.id,
+                        message=f"Model '{node.data.odooModel}' not found in current registry"
+                    ))
+        
+        # Registry order is already validated during load, skip additional validation here
+        
+        return GraphValidation(
+            valid=len(errors) == 0,
+            errors=errors,
+            warnings=warnings,
+            metadata={"registry_version": "v1", "models_count": len(registry.models)}
+        )
+
+    def list_registry_templates(self) -> List[Dict[str, Any]]:
+        """List available registry-based templates"""
+        from app.registry.loader import RegistryLoader
+
+        registry_path = Path(__file__).parent.parent.parent / "registry" / "odoo.yaml"
+        loader = RegistryLoader(registry_path)
+        templates = loader.list_migration_templates()
+        
+        return [
+            {
+                "type": key,
+                **template,
+                "available": True
+            }
+            for key, template in templates.items()
+        ]
+
+    def get_registry_dependencies(self, model_name: str) -> Dict[str, Any]:
+        """Get dependency information for a specific model from registry"""
+        from app.registry.loader import RegistryLoader
+
+        registry_path = Path(__file__).parent.parent.parent / "registry" / "odoo.yaml"
+        loader = RegistryLoader(registry_path)
+        
+        try:
+            dependencies = loader.get_dependencies(model_name)
+            
+            return {
+                "model": model_name,
+                "dependencies": dependencies,
+                "dependency_count": len(dependencies),
+                "available": True
+            }
+        except ValueError as e:
+            return {
+                "model": model_name,
+                "dependencies": [],
+                "dependency_count": 0,
+                "error": str(e),
+                "available": False
+            }

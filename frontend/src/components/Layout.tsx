@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import AIChat from './AIChat'
 
 export default function Layout() {
   const location = useLocation()
@@ -45,6 +46,8 @@ export default function Layout() {
         <div className="p-8">
           <Outlet />
         </div>
+        {/* AI Assistant Chat */}
+        <AIChat />
       </div>
     </div>
   )

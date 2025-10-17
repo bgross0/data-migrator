@@ -301,4 +301,25 @@ export const templatesApi = {
   },
 }
 
+// Assistant API
+export const assistantApi = {
+  chat: async (message: string, context?: Record<string, unknown>) => {
+    const response = await api.post('/assistant/chat', {
+      message,
+      context
+    })
+    return response.data
+  },
+
+  getSuggestions: async (page: string, datasetId?: number) => {
+    const response = await api.get('/assistant/suggestions', {
+      params: {
+        page,
+        dataset_id: datasetId
+      }
+    })
+    return response.data
+  },
+}
+
 export default api

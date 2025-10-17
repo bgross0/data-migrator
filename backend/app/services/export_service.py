@@ -173,6 +173,36 @@ class ExportService:
             exceptions_by_code=exceptions_by_code,
         )
 
+    # Graph-driven export methods
+    def execute_graph_export(self, dataset_id: int, graph_id: int, dry_run: bool = False) -> ExportResult:
+        """Execute export using graph-driven pipeline."""
+        from app.services.graph_execute_service import GraphExecuteService
+        
+        graph_execute_service = GraphExecuteService(self.db)
+        run_response = graph_execute_service.execute_graph_export(dataset_id, graph_id)
+        
+        # Convert RunResponse to ExportResult format for API compatibility
+        run = self.graph_service.get_run(run_response.id)
+        models = [
+            ModelExportSummary(
+                model=m.model,
+                csv_filename=f"{m.model}.csv",
+                rows_emitted=m.rows_emitted,
+                exceptions_count=m.exceptions_count
+            )
+            for m in run.metadata["executed_models"] if "executed_models" in run.metadata
+        ]
+        
+        return ExportResult(
+            dataset_id=dataset_id,
+            zip_path="",  # ZIP path in run metadata
+            models=models,
+            total_emitted=run.metadata.get("total_emitted", 0),
+            total_exceptions=0 if run.status == "completed" else len(run.metadata.get("failed_nodes", [])),
+            exceptions_by_code={},
+            message=run.error_message or f"Completed export"
+        )
+
     def _create_zip(
         self, output_dir: Path, zip_path: Path, summaries: List[ModelExportSummary]
     ) -> None:

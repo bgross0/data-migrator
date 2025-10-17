@@ -5,12 +5,15 @@ Loads and validates the Odoo registry including:
 - Import order (validated against importers/graph.py)
 - Model specifications (fields, types, transforms)
 - Seed data with synonym mappings
+- Graph generation capabilities
 """
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import yaml
+import uuid
 from app.importers.graph import ImportGraph
+from app.schemas.graph import GraphSpec, GraphNode, GraphEdge, GraphNodeData, NodeKind, EdgeKind
 
 
 @dataclass
@@ -252,16 +255,16 @@ class RegistryLoader:
     Loads YAML files and caches parsed registry in memory.
     """
 
-    def __init__(self, registry_path: Path, seeds_dir: Optional[Path] = None):
+    def __init__(self, registry_path: Optional[Path] = None, seeds_dir: Optional[Path] = None):
         """
         Initialize loader.
 
         Args:
-            registry_path: Path to main registry YAML file
+            registry_path: Path to main registry YAML file (default: "registry/odoo.yaml")
             seeds_dir: Path to directory containing seed YAML files (default: registry_path parent / "seeds")
         """
-        self.registry_path = registry_path
-        self.seeds_dir = seeds_dir or (registry_path.parent / "seeds")
+        self.registry_path = registry_path or Path("registry/odoo.yaml")
+        self.seeds_dir = seeds_dir or (self.registry_path.parent / "seeds")
         self._cache: Optional[Registry] = None
 
     def load(self, force_reload: bool = False) -> Registry:
@@ -328,3 +331,263 @@ class RegistryLoader:
         if seed_name not in registry.seeds:
             raise ValueError(f"Seed '{seed_name}' not found in registry")
         return registry.seeds[seed_name]
+
+    def to_graph_spec(self, model_names: Optional[List[str]] = None) -> GraphSpec:
+        """
+        Generate a GraphSpec from the registry import order.
+        
+        Args:
+            model_names: Optional list of models to include (defaults to all)
+            
+        Returns:
+            GraphSpec with nodes and edges representing the migration pipeline
+        """
+        registry = self.load()
+        
+        # Use all models or specified subset
+        models_to_include = model_names or registry.import_order
+        
+        # Filter to models that actually exist
+        valid_models = [m for m in models_to_include if m in registry.models]
+        
+        nodes = []
+        edges = []
+        
+        x_offset = 200
+        y_offset = 100
+        
+        # Create nodes for each model
+        model_position_map = {}
+        for i, model_name in enumerate(valid_models):
+            model_spec = registry.models[model_name]
+            
+            node_id = f"model_{model_name.replace('.', '_')}"
+            
+            node = GraphNode(
+                id=node_id,
+                kind="model",
+                label=model_name,
+                data=GraphNodeData(
+                    odooModel=model_name,
+                    dtype="model"
+                ),
+                position={"x": x_offset * (i % 3), "y": y_offset * i}
+            )
+            
+            nodes.append(node)
+            model_position_map[model_name] = node_id
+        
+        # Create dependency edges based on m2o relationships
+        for model_name in valid_models:
+            model_spec = registry.models[model_name]
+            source_node = model_position_map[model_name]
+            
+            for field_name, field_spec in model_spec.fields.items():
+                # Look for m2o relationships to other models in our list
+                if field_spec.target and field_spec.target in valid_models:
+                    target_node = model_position_map[field_spec.target]
+                    
+                    edge_id = f"edge_{source_node}_to_{target_node}_{field_name}"
+                    
+                    edge = GraphEdge(
+                        id=edge_id,
+                        from_=source_node,
+                        to=target_node,
+                        kind="depends",
+                        data={"sourceColumn": field_name}
+                    )
+                    
+                    edges.append(edge)
+        
+        # Create flow edges following import order
+        for i in range(len(valid_models) - 1):
+            source_model = valid_models[i]
+            target_model = valid_models[i + 1]
+            
+            source_node = model_position_map[source_model]
+            target_node = model_position_map[target_model]
+            
+            edge_id = f"flow_{source_node}_to_{target_node}"
+            
+            edge = GraphEdge(
+                id=edge_id,
+                from_=source_node,
+                to=target_node,
+                kind="flow"
+            )
+            
+            edges.append(edge)
+        
+        return GraphSpec(
+            id=f"registry_graph_{uuid.uuid4().hex[:8]}",
+            name="Registry Migration Pipeline",
+            version=1,
+            nodes=nodes,
+            edges=edges,
+            metadata={
+                "source": "registry",
+                "models": valid_models,
+                "generated_at": "auto-generated"
+            }
+        )
+
+    def get_dependencies(self, model_name: str) -> List[str]:
+        """
+        Extract dependency relationships from model field specs.
+        
+        Args:
+            model_name: Model to analyze
+            
+        Returns:
+            List of model names this model depends on
+        """
+        registry = self.load()
+        
+        if model_name not in registry.models:
+            raise ValueError(f"Model '{model_name}' not found in registry")
+            
+        model_spec = registry.models[model_name]
+        dependencies = []
+        
+        for field_spec in model_spec.fields.values():
+            if field_spec.target and field_spec.target != model_name:
+                dependencies.append(field_spec.target)
+                
+        return list(set(dependencies))  # Remove duplicates
+
+    def create_migration_template(self, template_type: str) -> GraphSpec:
+        """
+        Generate predefined migration templates.
+        
+        Args:
+            template_type: Type of template to create
+            
+        Returns:
+            GraphSpec configured for the specific template
+        """
+        if template_type == "crm":
+            # CRM Migration: res.partner -> crm.lead -> sale.order
+            models = [
+                "res.currency",
+                "res.country", 
+                "res.country.state",
+                "res.users",
+                "res.partner", 
+                "crm.team",
+                "utm.source",
+                "utm.medium",
+                "utm.campaign",
+                "crm.lost.reason",
+                "crm.lead",
+                "sale.order"
+            ]
+            
+        elif template_type == "ecommerce":
+            # E-commerce: products -> sales orders -> invoices
+            models = [
+                "res.currency",
+                "res.country",
+                "res.country.state", 
+                "res.users",
+                "res.partner",
+                "product.category",
+                "uom.uom",
+                "product.template",
+                "product.product",
+                "sale.order",
+                "sale.order.line",
+                "account.move"
+            ]
+            
+        elif template_type == "full-suite":
+            # Complete business suite - all models
+            models = [
+                "res.currency",
+                "res.country", 
+                "res.country.state",
+                "res.users",
+                "res.company",
+                "product.category",
+                "uom.uom",
+                "res.partner",
+                "crm.team",
+                "utm.source",
+                "utm.medium", 
+                "utm.campaign",
+                "crm.lost.reason",
+                "crm.lead",
+                "product.template",
+                "product.product",
+                "project.project",
+                "sale.order",
+                "sale.order.line",
+                "account.move",
+                "account.analytic.line"
+            ]
+            
+        elif template_type == "analytics":
+            # Analytics focused: partners -> analytic entries
+            models = [
+                "res.currency",
+                "res.country",
+                "res.users", 
+                "res.company",
+                "res.partner",
+                "product.product",
+                "uom.uom",
+                "account.analytic.line"
+            ]
+            
+        else:
+            raise ValueError(f"Unknown template type: {template_type}. Available: crm, ecommerce, full-suite, analytics")
+
+        graph_spec = self.to_graph_spec(models)
+        graph_spec.name = f"{template_type.title()} Migration Template"
+        graph_spec.metadata = {
+            "source": "registry",
+            "template_type": template_type, 
+            "models": models,
+            "description": f"Predefined migration template for {template_type} workflows"
+        }
+        
+        return graph_spec
+
+    def list_migration_templates(self) -> Dict[str, Dict[str, Any]]:
+        """
+        List available migration templates with metadata.
+        
+        Returns:
+            Dict with template types and their descriptions
+        """
+        templates = {
+            "crm": {
+                "name": "CRM Migration",
+                "description": "Customer and lead management migration",
+                "models": ["res.partner", "crm.lead", "sale.order"],
+                "estimated_time": "2-4 hours",
+                "complexity": "low"
+            },
+            "ecommerce": {
+                "name": "E-commerce Migration", 
+                "description": "Products, orders, and invoices",
+                "models": ["product.*", "sale.order.*", "account.move"],
+                "estimated_time": "4-6 hours",
+                "complexity": "medium"
+            },
+            "full-suite": {
+                "name": "Complete Business Suite",
+                "description": "All business processes and models", 
+                "models": "All 26 models",
+                "estimated_time": "8-12 hours",
+                "complexity": "high"
+            },
+            "analytics": {
+                "name": "Analytics Migration",
+                "description": "Financial reporting and analytics",
+                "models": ["res.partner", "account.analytic.line", "product.product"],
+                "estimated_time": "1-2 hours", 
+                "complexity": "low"
+            }
+        }
+        
+        return templates

@@ -20,6 +20,10 @@ class RunResponse(RunBase):
     id: int
     dataset_id: int
     graph_id: Optional[int] = None
+    current_node: Optional[str] = None
+    progress: int = 0
+    error_message: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
@@ -28,3 +32,11 @@ class RunResponse(RunBase):
 class RunListResponse(BaseModel):
     runs: List[RunResponse]
     total: int
+
+
+class GraphExecutionPlan(BaseModel):
+    """Plan for executing a graph-based export"""
+    execution_order: List[str]  # Node IDs in execution order
+    phases: List[Dict[str, Any]]  # Group information
+    estimated_duration_minutes: int
+    requirements: List[str]

@@ -8,6 +8,31 @@ Data Migrator is an intelligent data migration platform for importing messy spre
 
 **Stack**: FastAPI + SQLAlchemy + SQLite + React + Vite + Tailwind CSS
 
+## Development Tools & Quality
+
+**IMPORTANT**: This project uses comprehensive code quality tools. See [DEVELOPMENT.md](./DEVELOPMENT.md) for full details.
+
+**Quick Reference**:
+```bash
+make help           # Show all available commands
+make install-dev    # Install development dependencies
+make check          # Run all quality checks (format, lint, type-check, test)
+make test           # Run test suite
+make format         # Format code with Black and Ruff
+make lint           # Lint with Ruff
+make type-check     # Type check with mypy
+```
+
+**Tools in use**:
+- **Black** - Code formatting (100 char line length)
+- **Ruff** - Fast linting (replaces flake8, isort, pyupgrade, etc.)
+- **mypy** - Static type checking
+- **pytest** - Testing framework with coverage
+- **pre-commit** - Git hooks for automated quality checks
+- **Bandit** - Security scanning
+
+**Pre-commit hooks**: Automatically run before each commit to ensure code quality. Install with `make setup-pre-commit`.
+
 ## Development Commands
 
 ### Backend Setup & Development
@@ -23,12 +48,22 @@ alembic downgrade -1                    # Rollback one migration
 
 # Run development server
 uvicorn app.main:app --reload --port 8888              # Start API (http://localhost:8888)
+# Or use: make run
 
-# Testing (when tests exist)
-pytest                                  # Run all tests
+# Testing
+make test                               # Run core test suite
+make all-tests                          # Run all tests with coverage
+make test-fast                          # Run tests in parallel
+make test-unit                          # Run only unit tests
+make test-integration                   # Run only integration tests
 pytest tests/test_file.py              # Run specific test file
 pytest -v -s                           # Verbose with print output
-pytest --cov=app                       # With coverage
+
+# Code quality
+make format                             # Format code
+make lint                              # Lint code
+make type-check                        # Type check
+make check                             # Run all checks
 ```
 
 ### Frontend Development

@@ -1,0 +1,90 @@
+# Pre-commit hooks for Data Migrator
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+# Update hooks: pre-commit autoupdate
+
+repos:
+  # Ruff - Fast Python linter (replaces flake8, isort, etc.)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^backend/alembic/versions/
+      # Run the formatter
+      - id: ruff-format
+        exclude: ^backend/alembic/versions/
+
+  # Black - Code formatter (works alongside Ruff for formatting)
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3.11
+        exclude: ^backend/alembic/versions/
+
+  # mypy - Static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-requests
+          - types-PyYAML
+          - types-python-dateutil
+        args: [--config-file=backend/pyproject.toml]
+        files: ^backend/app/
+        exclude: ^backend/(alembic|tests)/
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^backend/alembic/versions/
+      - id: end-of-file-fixer
+        exclude: ^backend/alembic/versions/
+      - id: check-yaml
+        args: [--safe]
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-private-key
+
+  # Python-specific checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: debug-statements
+      - id: check-ast
+      - id: check-docstring-first
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: [-c, backend/pyproject.toml, -r, backend/app]
+        exclude: ^backend/tests/
+
+# Global configuration
+default_language_version:
+  python: python3.11
+
+# Files to exclude globally
+exclude: |
+  (?x)^(
+      backend/venv/.*|
+      backend/\.venv/.*|
+      backend/alembic/versions/.*|
+      frontend/node_modules/.*|
+      \.git/.*|
+      .*\.pyc|
+      .*/__pycache__/.*
+  )$

@@ -4,18 +4,17 @@ Graph execution service for running graph-based export pipelines.
 Executes nodes in topological order with real-time progress tracking
 and handles failures gracefully.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
-import uuid
 from sqlalchemy.orm import Session
 import polars as pl
 
 from app.models.graph import Graph, GraphRun
-from app.schemas.run import RunCreate, RunBase, RunResponse, GraphExecutionPlan
+from app.schemas.run import RunResponse, GraphExecutionPlan
+from app.schemas.graph import GraphSpec
 from app.services.graph_service import GraphService
 from app.services.export_service import ExportService
 from app.services.import_service import ImportService
-from app.schemas.graph import GraphSpec
 from app.registry.loader import RegistryLoader
 
 
@@ -145,46 +144,74 @@ class GraphExecuteService:
             }
         )
 
-    def execute_graph_export(self, dataset_id: int, graph_id: int) -> RunResponse:
+    def execute_graph_export(self, dataset_id: int, graph_id: int, run_id: Optional[str] = None) -> RunResponse:
         """
         Execute graph-driven export pipeline.
-        
+
         Follows graph topology with real-time progress tracking.
         Handles failures gracefully and continues with remaining nodes.
-        
+
         Args:
             dataset_id: ID of dataset to export
             graph_id: ID of graph defining export workflow
-            
+            run_id: Optional existing run ID to update (for concurrent safety)
+
         Returns:
             RunResponse with final statistics
         """
         graph = self.graph_service.get_graph(graph_id)
         if not graph:
             raise ValueError(f"Graph {graph_id} not found")
-            
+
         from app.schemas.graph import GraphSpec
         graph_spec = GraphSpec(**graph.spec)
-        
-        # Create or get existing run
-        runs = self.graph_service.list_runs(graph_id, limit=1, offset=0)
-        run_response = runs[0] if runs else self.create_graph_run(dataset_id, graph_id)
+
+        # Use provided run_id or create new run
+        if run_id:
+            run = self.graph_service.get_run(run_id)
+            if not run:
+                raise ValueError(f"Run {run_id} not found")
+            run_response = RunResponse(
+                id=run.id,
+                dataset_id=run.dataset_id,
+                graph_id=run.graph_id,
+                status=run.status,
+                started_at=run.started_at.isoformat() if run.started_at else None,
+                metadata=run.context or {}
+            )
+        else:
+            # Create new run if not provided
+            run_response = self.create_graph_run(dataset_id, graph_id)
         
         try:
             # Plan execution
             plan = self.create_execution_plan(graph_spec)
             
             # Initialize execution state
-            executed_nodes = []
-            failed_nodes = []
-            current_step = 0
-            total_steps = len(plan.execution_order)
-            
+            executed_nodes: List[str] = []
+            failed_nodes: List[str] = []
+            total_steps = len(plan.execution_order) if plan.execution_order else 1
+            total_emitted = 0
+
+            # Update status with initial context
             self.graph_service.update_run_status(
-                run_response.id, 
-                status="running"
+                run_response.id,
+                status="running",
+                context={
+                    "dataset_id": dataset_id,
+                    "graph_id": graph_id,
+                    "plan": plan.execution_order,
+                    "total_steps": total_steps
+                }
             )
-            
+
+            # Log execution start
+            self.graph_service.append_log(
+                run_response.id,
+                f"Starting graph execution with {total_steps} models",
+                "info"
+            )
+
             # Execute nodes in dependency order
             for i, model_name in enumerate(plan.execution_order):
                 try:
@@ -194,7 +221,7 @@ class GraphExecuteService:
                         run_response.id,
                         status="running",
                         progress=progress,
-                        current_node=f"model_{model_name}"
+                        current_node=f"model_{model_name}",
                     )
                     
                     # Execute node (model export)
@@ -202,20 +229,20 @@ class GraphExecuteService:
                         model_name, run_response.id, dataset_id
                     )
                     
-                    if result.success:
+                    if result["success"]:
                         executed_nodes.append(model_name)
-                        total_emitted = result.rows_emitted
+                        total_emitted += result["rows_emitted"]
                         
                         # Log success
                         self._log_info(
                             run_response.id, 
-                            f"✅ Exported {model_name}: {result.rows_emitted} rows"
+                            f"✅ Exported {model_name}: {result['rows_emitted']} rows"
                         )
                     else:
                         failed_nodes.append(model_name)
                         self._log_error(
                             run_response.id,
-                            f"❌ Failed to export {model_name}: {result.error}"
+                            f"❌ Failed to export {model_name}: {result['error']}"
                         )
                         if not self._can_continue_execution(plan, executed_nodes, failed_nodes):
                             break  # Too many failures, stop execution                            
@@ -239,13 +266,13 @@ class GraphExecuteService:
                 run_response.id,
                 status=status,
                 progress=100,
-                finished_at=datetime.utcnow().isoformat(),
-                error_message=message if not status == "completed" else None,
-                metadata={
+                finished_at=datetime.utcnow(),
+                error_message=message if status != "completed" else None,
+                context={
                     "executed_nodes": executed_nodes,
                     "failed_nodes": failed_nodes,
-                    "total_emitted": total_emitted
-                }
+                    "total_emitted": total_emitted,
+                },
             )
             
             # Refresh run data for response
@@ -257,8 +284,8 @@ class GraphExecuteService:
                 graph_id=updated_run.graph_id,
                 status=status,
                 progress=100,
-                error_message=message if not status == "completed" else None,
-                metadata=updated_run.metadata or {}
+                error_message=message if status != "completed" else None,
+                metadata=updated_run.context or {},
             )
             
         except Exception as e:
@@ -267,7 +294,7 @@ class GraphExecuteService:
                 run_response.id,
                 status="failed",
                 error_message=f"Execution failed: {str(e)}",
-                finished_at=datetime.utcnow().isoformat()
+                finished_at=datetime.utcnow(),
             )
             
             updated_run = self.graph_service.get_run(run_response.id)
@@ -278,60 +305,90 @@ class GraphExecuteService:
                 status="failed",
                 progress=0,
                 error_message=f"Execution failed: {str(e)}",
-                metadata=updated_run.metadata or {}
+                metadata=updated_run.context or {},
             )
 
     def execute_model_node(self, model_name: str, run_id: int, dataset_id: int) -> Dict[str, Any]:
         """
         Execute a single model export node.
-        
+
         Args:
             model_name: Odoo model name to export
             run_id: Run ID for logging
             dataset_id: Dataset ID for data access
-            
+
         Returns:
             Dictionary with execution result
         """
         try:
             # Use existing export service logic for model export
             registry = self.registry_loader.load()
-            
-            # Get dataset data
+
+            if model_name not in registry.models:
+                return {
+                    "success": False,
+                    "rows_emitted": 0,
+                    "error": f"Model '{model_name}' not found in registry.",
+                }
+
+            model_spec = registry.models[model_name]
+
+            # Get CONFIRMED mappings for this model
+            from app.models.mapping import Mapping, MappingStatus
+            mappings = self.db.query(Mapping).filter(
+                Mapping.dataset_id == dataset_id,
+                Mapping.target_model == model_name,
+                Mapping.status == MappingStatus.CONFIRMED
+            ).all()
+
+            if not mappings:
+                # No confirmed mappings for this model, skip
+                return {"success": True, "rows_emitted": 0, "error": None}
+
+            # Get dataset data for the sheet with mappings
             from app.adapters.repositories_sqlite import SQLiteDatasetsRepo
             datasets_repo = SQLiteDatasetsRepo(self.db)
-            df = datasets_repo.get_dataframe(dataset_id)
-            
+
+            sheet_name = mappings[0].sheet.name if mappings[0].sheet else None
+            df = datasets_repo.get_dataframe(dataset_id, sheet_name=sheet_name)
+
             if df is None or len(df) == 0:
                 return {"success": True, "rows_emitted": 0, "error": None}
-            
+
             # Add source_ptr if missing
             if "source_ptr" not in df.columns:
                 df = df.with_columns(
                     pl.Series("source_ptr", [f"row_{i}" for i in range(len(df))])
                 )
-            
+
+            # Apply mappings and transforms to prepare data for the target model
+            df = self.export_service._apply_mappings_and_transforms(df, mappings, model_spec)
+
             # Use existing validation and emission logic
             from app.validate.validator import Validator
             from app.export.csv_emitter import CSVEmitter
             from app.adapters.repositories_sqlite import SQLiteExceptionsRepo
-            
+
             validation_repo = SQLiteExceptionsRepo(self.db)
             fk_cache: Dict[str, set] = {}  # Empty cache for each run
-            csv_emitter = CSVEmitter(registry, validation_repo, dataset_id, None)  # No output dir needed for now
-            
+
+            # Create output directory first
+            output_dir = self.export_service.artifact_root / str(dataset_id)
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            # Initialize CSVEmitter with proper output directory
+            csv_emitter = CSVEmitter(registry, validation_repo, dataset_id, output_dir)
+
             validator = Validator(validation_repo, fk_cache, dataset_id)
-            validation_result = validator.validate(df, registry.models[model_name], registry.seeds)
-            
+            validation_result = validator.validate(df, model_spec, registry.seeds)
+
             # Commit exceptions
             self.db.commit()
-            
+
             # Use CSV emitter for deterministic generation
             if len(validation_result.valid_df) > 0:
                 from app.export.idgen import reset_dedup_tracker
                 reset_dedup_tracker()
-                csv_emitter.output_dir = self.export_service.artifact_root / str(dataset_id)
-                csv_emitter.output_dir.mkdir(parents=True, exist_ok=True)
                 
                 # Emit to temporary location
                 csv_path, emitted_ids = csv_emitter.emit(
@@ -342,20 +399,20 @@ class GraphExecuteService:
                     "success": True,
                     "rows_emitted": len(validation_result.valid_df),
                     "csv_path": str(csv_path),
-                    "error": None
+                    "error": None,
                 }
             else:
                 return {
                     "success": True,
                     "rows_emitted": 0,
-                    "error": None
+                    "error": None,
                 }
                 
         except Exception as e:
             return {
                 "success": False,
                 "rows_emitted": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
     def _can_continue_execution(self, plan: GraphExecutionPlan, executed_nodes: List[str], failed_nodes: List[str]) -> bool:
@@ -371,12 +428,16 @@ class GraphExecuteService:
         db = self.db
 
         run = db.query(GraphRun).filter(GraphRun.id == run_id).first()
-        if run and run.logs:
-            run.logs.append({
-                "timestamp": datetime.utcnow().isoformat(),
-                "level": "info",
-                "message": message
-            })
+        if run:
+            logs = run.logs or []
+            logs.append(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "level": "info",
+                    "message": message,
+                }
+            )
+            run.logs = logs
             self.db.commit()
 
     def _log_error(self, run_id: str, message: str) -> None:
@@ -385,10 +446,14 @@ class GraphExecuteService:
         db = self.db
 
         run = db.query(GraphRun).filter(GraphRun.id == run_id).first()
-        if run and run.logs:
-            run.logs.append({
-                "timestamp": datetime.utcnow().isoformat(),
-                "level": "error", 
-                "message": message
-            })
+        if run:
+            logs = run.logs or []
+            logs.append(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "level": "error",
+                    "message": message,
+                }
+            )
+            run.logs = logs
             self.db.commit()

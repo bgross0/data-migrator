@@ -1,25 +1,57 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { ReactFlowProvider } from 'reactflow'
 import { FlowCanvas } from '@/visualizer/FlowCanvas'
 import { useGraphStore } from '@/visualizer/useGraphStore'
-import { datasetsApi } from '@/services/api'
+import { datasetsApi, graphsApi } from '@/services/api'
 import { Mapping, Dataset } from '@/types/mapping'
-import { GraphSpec } from '@/types/graph'
+import { GraphSpec, GraphValidation } from '@/types/graph'
 
 export default function FlowView() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [dataset, setDataset] = useState<Dataset | null>(null)
-  const { loadGraph, exportGraph, isDirty } = useGraphStore()
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [validationResult, setValidationResult] = useState<GraphValidation | null>(null)
+  const [lastRunId, setLastRunId] = useState<string | null>(null)
+  const [isRunning, setIsRunning] = useState(false)
+
+  const {
+    loadGraph,
+    exportGraph,
+    isDirty,
+    graphId,
+    graphName,
+    setGraphId,
+    isSaving,
+    setSaving,
+    isValidating,
+    setValidating,
+  } = useGraphStore((state) => ({
+    loadGraph: state.loadGraph,
+    exportGraph: state.exportGraph,
+    isDirty: state.isDirty,
+    graphId: state.graphId,
+    graphName: state.graphName,
+    setGraphId: state.setGraphId,
+    isSaving: state.isSaving,
+    setSaving: state.setSaving,
+    isValidating: state.isValidating,
+    setValidating: state.setValidating,
+  }))
 
   useEffect(() => {
     loadDataAndGenerateGraph()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const loadDataAndGenerateGraph = async () => {
+    setLoading(true)
+    setActionMessage(null)
+    setErrorMessage(null)
     try {
-      // Load dataset and mappings
       const datasetData = await datasetsApi.get(Number(id))
       setDataset(datasetData)
 
@@ -27,40 +59,116 @@ export default function FlowView() {
       const data = await response.json()
       const mappings: Mapping[] = data.mappings || []
 
-      // Generate GraphSpec from mappings
       const graphSpec = generateGraphFromMappings(datasetData, mappings)
       loadGraph(graphSpec)
     } catch (error) {
       console.error('Failed to load data:', error)
+      setErrorMessage('Failed to load dataset or mappings.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSave = async () => {
+  const ensureGraphSaved = async (): Promise<string> => {
     const spec = exportGraph()
-    // TODO: Call API to save graph
-    console.log('Saving graph:', spec)
-    useGraphStore.setState({ isDirty: false })
+    const payload = {
+      name: spec.name,
+      nodes: spec.nodes,
+      edges: spec.edges,
+      metadata: {
+        ...(spec.metadata || {}),
+        datasetId: dataset?.id,
+        lastModified: new Date().toISOString(),
+      },
+    }
+
+    setSaving(true)
+    setErrorMessage(null)
+
+    try {
+      if (graphId) {
+        const updated = await graphsApi.update(graphId, payload)
+        setGraphId(updated.id)
+        useGraphStore.setState({
+          graphVersion: updated.version ?? 1,
+          graphName: updated.name ?? spec.name,
+        })
+        setDirty(false)
+        return updated.id
+      }
+
+      const created = await graphsApi.create(payload)
+      setGraphId(created.id)
+      useGraphStore.setState({
+        graphVersion: created.version ?? 1,
+        graphName: created.name ?? spec.name,
+      })
+      setDirty(false)
+      return created.id
+    } catch (error) {
+      console.error('Failed to save graph', error)
+      setErrorMessage('Failed to save graph. Please try again.')
+      throw error
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSave = async () => {
+    try {
+      const savedGraphId = await ensureGraphSaved()
+      setActionMessage(`Graph saved (ID: ${savedGraphId})`)
+      setValidationResult(null)
+    } catch {
+      // Errors handled in ensureGraphSaved
+    }
   }
 
   const handleValidate = async () => {
-    const spec = exportGraph()
-    // TODO: Call validation API
-    console.log('Validating graph:', spec)
+    try {
+      const savedGraphId = await ensureGraphSaved()
+      setValidating(true)
+      const result = await graphsApi.validate(savedGraphId)
+      setValidationResult(result)
+      if (result.valid) {
+        setActionMessage('Graph validation succeeded. Ready to run.')
+        setErrorMessage(null)
+      } else {
+        setErrorMessage('Validation uncovered issues. Review the details below.')
+        setActionMessage(null)
+      }
+    } catch {
+      // ensureGraphSaved already set error state
+    } finally {
+      setValidating(false)
+    }
   }
 
   const handleRun = async () => {
-    const spec = exportGraph()
-    // TODO: Call run API
-    console.log('Running graph:', spec)
+    try {
+      const savedGraphId = await ensureGraphSaved()
+      setIsRunning(true)
+      const response = await graphsApi.run(savedGraphId, dataset?.id)
+      setActionMessage(`Graph execution queued (Run ID: ${response.id})`)
+      setErrorMessage(null)
+      setValidationResult(null)
+      setLastRunId(response.id)
+      navigate(`/runs?runId=${response.id}`)
+    } catch (error) {
+      console.error('Failed to run graph', error)
+      if (!errorMessage) {
+        setErrorMessage('Failed to execute graph. Please check configuration and try again.')
+      }
+    } finally {
+      setIsRunning(false)
+    }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4">⚙️</div>
+          <div className="mb-4 text-4xl">⚙️</div>
           <div className="text-gray-600">Loading flow...</div>
         </div>
       </div>
@@ -68,47 +176,99 @@ export default function FlowView() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Top nav */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
+    <div className="flex h-screen flex-col">
+      <div className="border-b border-gray-200 bg-white px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               to={`/mappings/${id}`}
-              className="text-blue-600 hover:underline text-sm"
+              className="text-sm text-blue-600 hover:underline"
             >
               ← Back to Mappings
             </Link>
             <h1 className="text-xl font-bold text-gray-900">
-              Flow View: {dataset?.name}
+              Flow View: {graphName || dataset?.name}
             </h1>
           </div>
 
           <div className="flex gap-2">
             <button
               onClick={handleValidate}
-              className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
+              disabled={isSaving || isRunning}
+              className="rounded bg-yellow-600 px-4 py-2 text-sm text-white hover:bg-yellow-700 disabled:cursor-not-allowed disabled:bg-gray-400"
             >
-              Validate
+              {isValidating ? 'Validating…' : 'Validate'}
             </button>
             <button
               onClick={handleSave}
-              disabled={!isDirty}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+              disabled={!isDirty || isSaving}
+              className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
             >
-              Save
+              {isSaving ? 'Saving…' : 'Save'}
             </button>
             <button
               onClick={handleRun}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+              disabled={isRunning || isSaving}
+              className="rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-400"
             >
-              Run Import
+              {isRunning ? 'Running…' : 'Run Import'}
             </button>
           </div>
         </div>
+
+        {(actionMessage || errorMessage) && (
+          <div className="mt-3 space-y-2 text-sm">
+            {actionMessage && (
+              <div className="rounded border border-green-200 bg-green-50 px-4 py-2 text-green-700">
+                {actionMessage}
+                {lastRunId && (
+                  <button
+                    onClick={() => navigate(`/runs?runId=${lastRunId}`)}
+                    className="ml-3 underline"
+                  >
+                    View run
+                  </button>
+                )}
+              </div>
+            )}
+            {errorMessage && (
+              <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-red-700">
+                {errorMessage}
+              </div>
+            )}
+          </div>
+        )}
+
+        {validationResult && (
+          <div className="mt-3 rounded border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+            <p className="font-semibold">
+              Validation {validationResult.valid ? 'passed' : 'found issues'}
+            </p>
+            {!validationResult.valid && validationResult.errors.length > 0 && (
+              <ul className="mt-2 list-disc pl-5">
+                {validationResult.errors.map((err, idx) => (
+                  <li key={`${err.nodeId || err.edgeId || 'error'}-${idx}`}>
+                    {err.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {validationResult.warnings.length > 0 && (
+              <>
+                <p className="mt-3 font-semibold">Warnings</p>
+                <ul className="mt-1 list-disc pl-5">
+                  {validationResult.warnings.map((warn, idx) => (
+                    <li key={`${warn.nodeId || warn.edgeId || 'warn'}-${idx}`}>
+                      {warn.message}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Canvas */}
       <div className="flex-1">
         <ReactFlowProvider>
           <FlowCanvas />
@@ -118,22 +278,17 @@ export default function FlowView() {
   )
 }
 
-/**
- * Generate a GraphSpec from existing mappings
- * This creates a visual representation of the mapping flow
- */
 function generateGraphFromMappings(dataset: Dataset, mappings: Mapping[]): GraphSpec {
   const nodes: GraphSpec['nodes'] = []
   const edges: GraphSpec['edges'] = []
 
-  // Group mappings by sheet and target model
   const sheetMap = new Map<number, { sheet: any; mappings: Mapping[] }>()
 
-  dataset.sheets?.forEach(sheet => {
-    // Show ALL mappings (pending, confirmed) - not just confirmed
-    const sheetMappings = mappings.filter(m =>
-      m.sheet_id === sheet.id &&
-      (m.status === 'confirmed' || m.status === 'pending')
+  dataset.sheets?.forEach((sheet) => {
+    const sheetMappings = mappings.filter(
+      (m) =>
+        m.sheet_id === sheet.id &&
+        (m.status === 'confirmed' || m.status === 'pending')
     )
     if (sheetMappings.length > 0) {
       sheetMap.set(sheet.id, { sheet, mappings: sheetMappings })
@@ -142,23 +297,20 @@ function generateGraphFromMappings(dataset: Dataset, mappings: Mapping[]): Graph
 
   let yOffset = 0
 
-  // Create nodes for each sheet → fields → models → loader
   sheetMap.forEach(({ sheet, mappings: sheetMappings }, sheetId) => {
-    // Sheet node
     const sheetNodeId = `sheet-${sheetId}`
     nodes.push({
       id: sheetNodeId,
       kind: 'sheet',
       label: sheet.name,
       data: {
-        sheetName: sheet.name
+        sheetName: sheet.name,
       },
-      position: { x: 0, y: yOffset }
+      position: { x: 0, y: yOffset },
     })
 
-    // Group by target model
     const modelGroups = new Map<string, Mapping[]>()
-    sheetMappings.forEach(mapping => {
+    sheetMappings.forEach((mapping) => {
       if (mapping.target_model) {
         const existing = modelGroups.get(mapping.target_model) || []
         existing.push(mapping)
@@ -169,7 +321,6 @@ function generateGraphFromMappings(dataset: Dataset, mappings: Mapping[]): Graph
     let modelOffset = 0
 
     modelGroups.forEach((modelMappings, targetModel) => {
-      // Model node
       const modelNodeId = `model-${targetModel}-${sheetId}`
       nodes.push({
         id: modelNodeId,
@@ -177,17 +328,12 @@ function generateGraphFromMappings(dataset: Dataset, mappings: Mapping[]): Graph
         label: targetModel,
         data: {
           odooModel: targetModel,
-          subtitle: 'Odoo Model'
         },
-        position: { x: 750, y: yOffset + modelOffset }
+        position: { x: 750, y: yOffset + modelOffset },
       })
 
-      // Field nodes (source and target)
       modelMappings.forEach((mapping, idx) => {
         const sourceFieldNodeId = `source-field-${mapping.id}`
-        const targetFieldNodeId = `target-field-${mapping.id}`
-
-        // Source field node (from spreadsheet)
         nodes.push({
           id: sourceFieldNodeId,
           kind: 'field',
@@ -196,14 +342,12 @@ function generateGraphFromMappings(dataset: Dataset, mappings: Mapping[]): Graph
             fieldName: mapping.header_name,
             sourceColumn: mapping.header_name,
             status: mapping.status,
-            subtitle: 'Source Column',
-            nodeType: 'Source Field'
           },
-          position: { x: 250, y: yOffset + modelOffset + (idx * 80) }
+          position: { x: 250, y: yOffset + modelOffset + idx * 80 },
         })
 
-        // Target field node (Odoo field)
         if (mapping.target_field) {
+          const targetFieldNodeId = `target-field-${mapping.id}`
           nodes.push({
             id: targetFieldNodeId,
             kind: 'field',
@@ -212,87 +356,79 @@ function generateGraphFromMappings(dataset: Dataset, mappings: Mapping[]): Graph
               fieldName: mapping.target_field,
               odooModel: mapping.target_model,
               status: mapping.status,
-              subtitle: `${mapping.target_model}`,
-              nodeType: 'Target Field'
             },
-            position: { x: 500, y: yOffset + modelOffset + (idx * 80) }
+            position: { x: 500, y: yOffset + modelOffset + idx * 80 },
           })
-        }
 
-        // Edge: sheet → source field
-        edges.push({
-          id: `edge-sheet-source-${mapping.id}`,
-          from: sheetNodeId,
-          to: sourceFieldNodeId,
-          kind: 'flow',
-          data: {
-            sourceColumn: mapping.header_name
-          }
-        })
-
-        // Edge: source field → target field (or model if no target field)
-        if (mapping.target_field) {
           edges.push({
             id: `edge-source-target-${mapping.id}`,
             from: sourceFieldNodeId,
             to: targetFieldNodeId,
             kind: 'map',
             data: {
-              mappingId: mapping.id
-            }
+              mappingId: mapping.id,
+            },
+          })
+
+          edges.push({
+            id: `edge-target-model-${mapping.id}`,
+            from: targetFieldNodeId,
+            to: modelNodeId,
+            kind: 'flow',
           })
         }
 
-        // If there are transforms, create transform nodes between source and target
+        edges.push({
+          id: `edge-sheet-source-${mapping.id}`,
+          from: sheetNodeId,
+          to: sourceFieldNodeId,
+          kind: 'flow',
+          data: {
+            sourceColumn: mapping.header_name,
+          },
+        })
+
         if (mapping.transforms && mapping.transforms.length > 0) {
           mapping.transforms.forEach((transform: any, tIdx: number) => {
             const transformNodeId = `transform-${transform.id}`
-
             nodes.push({
               id: transformNodeId,
               kind: 'transform',
               label: transform.fn,
               data: {
                 transformId: transform.fn,
-                params: transform.params
+                params: transform.params,
               },
-              position: { x: 375, y: yOffset + modelOffset + (idx * 80) + (tIdx * 60) }
+              position: {
+                x: 375,
+                y: yOffset + modelOffset + idx * 80 + tIdx * 60,
+              },
             })
 
-            // Edge: source field → first transform, or transform → transform
-            const sourceId = tIdx === 0 ? sourceFieldNodeId : `transform-${mapping.transforms![tIdx - 1].id}`
+            const sourceId =
+              tIdx === 0
+                ? sourceFieldNodeId
+                : `transform-${mapping.transforms![tIdx - 1].id}`
             edges.push({
               id: `edge-transform-${transform.id}`,
               from: sourceId,
               to: transformNodeId,
-              kind: 'flow'
+              kind: 'flow',
             })
           })
 
-          // Edge: last transform → target field
           if (mapping.target_field) {
             const lastTransform = mapping.transforms[mapping.transforms.length - 1]
             edges.push({
               id: `edge-transform-target-${mapping.id}`,
               from: `transform-${lastTransform.id}`,
-              to: targetFieldNodeId,
-              kind: 'flow'
+              to: `target-field-${mapping.id}`,
+              kind: 'flow',
             })
           }
         }
-
-        // Edge: target field → model
-        if (mapping.target_field) {
-          edges.push({
-            id: `edge-target-model-${mapping.id}`,
-            from: targetFieldNodeId,
-            to: modelNodeId,
-            kind: 'flow'
-          })
-        }
       })
 
-      // Loader node for this model
       const loaderNodeId = `loader-${targetModel}-${sheetId}`
       nodes.push({
         id: loaderNodeId,
@@ -301,20 +437,18 @@ function generateGraphFromMappings(dataset: Dataset, mappings: Mapping[]): Graph
         data: {
           odooModel: targetModel,
           upsertKey: ['external_id'],
-          subtitle: 'Import to Odoo'
         },
-        position: { x: 1000, y: yOffset + modelOffset }
+        position: { x: 1000, y: yOffset + modelOffset },
       })
 
-      // Edge: model → loader
       edges.push({
         id: `edge-model-loader-${targetModel}-${sheetId}`,
         from: modelNodeId,
         to: loaderNodeId,
-        kind: 'flow'
+        kind: 'flow',
       })
 
-      modelOffset += (modelMappings.length * 80) + 100
+      modelOffset += modelMappings.length * 80 + 100
     })
 
     yOffset += modelOffset + 200
@@ -328,7 +462,7 @@ function generateGraphFromMappings(dataset: Dataset, mappings: Mapping[]): Graph
     edges,
     metadata: {
       datasetId: dataset.id,
-      generatedAt: new Date().toISOString()
-    }
+      generatedAt: new Date().toISOString(),
+    },
   }
 }

@@ -4,6 +4,7 @@ Two-phase import executor - handles parent/child import ordering with relationsh
 from typing import Dict, List, Any
 from app.connectors.odoo import OdooConnector
 from app.models import KeyMap, Run
+from app.models.run import RunLog, LogLevel
 from sqlalchemy.orm import Session
 
 
@@ -79,7 +80,16 @@ class TwoPhaseImporter:
 
             except Exception as e:
                 stats["errors"] += 1
-                # TODO: Log error to RunLog
+                error_message = f"{model}: {e}"
+                self.db.add(
+                    RunLog(
+                        run_id=self.run.id,
+                        level=LogLevel.ERROR,
+                        message=error_message,
+                        row_ref={"record": record},
+                    )
+                )
+                self.db.commit()
 
         return stats
 

@@ -149,6 +149,54 @@ class Registry:
     models: Dict[str, ModelSpec]
     seeds: Dict[str, SeedSpec] = field(default_factory=dict)
 
+    def get_models_for_groups(self, groups: List[str]) -> List[str]:
+        """
+        Get list of models for the specified module groups.
+
+        Args:
+            groups: List of module group names (e.g., ["sales_crm", "contacts"])
+
+        Returns:
+            List of model names that belong to the specified groups
+        """
+        # Define module groups to model mappings
+        # This should ideally be loaded from configuration
+        GROUP_TO_MODELS = {
+            "sales_crm": [
+                "res.partner", "crm.team", "utm.source", "utm.medium", "utm.campaign",
+                "crm.lost.reason", "crm.lead", "product.category", "product.template",
+                "product.product", "sale.order", "sale.order.line"
+            ],
+            "contacts": ["res.partner", "res.company", "res.users"],
+            "projects": ["project.project", "project.task", "project.task.type"],
+            "accounting": [
+                "account.account", "account.move", "account.move.line",
+                "account.payment", "account.journal"
+            ],
+            "products": [
+                "product.category", "product.template", "product.product",
+                "product.uom", "product.uom.categ"
+            ],
+            "purchase": [
+                "purchase.order", "purchase.order.line", "res.partner"
+            ],
+            "inventory": [
+                "stock.location", "stock.move", "stock.picking", "stock.quant"
+            ]
+        }
+
+        # Collect all models from specified groups
+        result = set()
+        for group in groups:
+            if group in GROUP_TO_MODELS:
+                for model in GROUP_TO_MODELS[group]:
+                    # Only include models that exist in registry
+                    if model in self.models:
+                        result.add(model)
+
+        # Return in import order
+        return [m for m in self.import_order if m in result]
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any], seeds: Dict[str, SeedSpec]) -> "Registry":
         """Parse full registry from YAML dict."""

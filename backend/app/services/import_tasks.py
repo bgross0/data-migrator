@@ -1,12 +1,15 @@
 """
-Celery tasks for executing imports.
+Celery tasks for executing imports and graph execution.
 """
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
 from app.models import Run
 from app.models.run import RunStatus
+from app.models.graph import Graph, GraphRun
 from app.connectors.odoo import OdooConnector
 from app.services.import_service import ImportService
+from app.services.graph_execute_service import GraphExecuteService
+from app.schemas.graph import GraphSpec
 from app.core.config import settings
 
 

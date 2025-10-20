@@ -7,9 +7,10 @@ Pipeline:
 3. For each model in import_order:
    a. Get DataFrame (cleaned or raw)
    b. Add source_ptr if missing (use row index)
-   c. Validate → track exceptions, get valid rows
-   d. Emit CSV → generate IDs, normalize, write
-   e. Populate FK cache with emitted IDs
+   c. Apply mappings and transforms
+   d. Validate → track exceptions, get valid rows
+   e. Emit CSV → generate IDs, normalize, write
+   f. Populate FK cache with emitted IDs
 4. Create ZIP of all CSVs
 5. Return: zip_path, counts, exception summary
 
@@ -28,6 +29,7 @@ from app.adapters.repositories_sqlite import SQLiteExceptionsRepo, SQLiteDataset
 from app.validate.validator import Validator
 from app.export.csv_emitter import CSVEmitter
 from app.export.idgen import reset_dedup_tracker
+from app.models.mapping import Mapping, MappingStatus
 
 
 @dataclass
@@ -114,9 +116,22 @@ class ExportService:
 
             model_spec = registry.models[model_name]
 
+            # Get mappings for this model
+            mappings = self.db.query(Mapping).filter(
+                Mapping.dataset_id == dataset_id,
+                Mapping.target_model == model_name,
+                Mapping.status == MappingStatus.CONFIRMED
+            ).all()
+
+            if not mappings:
+                # No mappings for this model, skip
+                continue
+
             # Get DataFrame (cleaned or raw)
             try:
-                df = self.datasets_repo.get_dataframe(dataset_id)
+                # Get the sheet that has mappings for this model
+                sheet_name = mappings[0].sheet.name if mappings[0].sheet else None
+                df = self.datasets_repo.get_dataframe(dataset_id, sheet_name=sheet_name)
             except ValueError:
                 # No data for this model, skip
                 continue
@@ -126,6 +141,9 @@ class ExportService:
                 df = df.with_columns(
                     pl.Series("source_ptr", [f"row_{i}" for i in range(len(df))])
                 )
+
+            # Apply mappings and transforms to prepare data for the target model
+            df = self._apply_mappings_and_transforms(df, mappings, model_spec)
 
             # Validate
             validator = Validator(self.exceptions_repo, fk_cache, dataset_id)
@@ -202,6 +220,86 @@ class ExportService:
             exceptions_by_code={},
             message=run.error_message or f"Completed export"
         )
+
+    def _apply_mappings_and_transforms(
+        self, df: pl.DataFrame, mappings: list, model_spec
+    ) -> pl.DataFrame:
+        """
+        Apply confirmed mappings and transforms to prepare data for target model.
+
+        Args:
+            df: Source dataframe
+            mappings: List of confirmed mappings for this model
+            model_spec: Target model specification
+
+        Returns:
+            Transformed dataframe ready for validation
+        """
+        # Create a new dataframe with only mapped columns
+        result_df = pl.DataFrame()
+
+        for mapping in mappings:
+            if mapping.status != MappingStatus.CONFIRMED:
+                continue
+
+            source_col = mapping.header_name
+            target_field = mapping.target_field
+
+            if source_col not in df.columns:
+                continue
+
+            # Get the column data
+            col_data = df[source_col]
+
+            # Apply lambda function if specified
+            if mapping.mapping_type == "lambda" and mapping.lambda_function:
+                try:
+                    # Execute lambda function on the column
+                    # Lambda should be like: "lambda x: x.upper()"
+                    func = eval(mapping.lambda_function)
+                    col_data = col_data.map_elements(func, return_dtype=pl.Utf8)
+                except Exception as e:
+                    # Log error and skip this mapping
+                    continue
+
+            # Apply transforms in order
+            for transform in sorted(mapping.transforms, key=lambda t: t.order):
+                from app.core.transformer import TransformRegistry
+                registry = TransformRegistry()
+                transform_fn = registry.get(transform.fn)
+                if transform_fn:
+                    try:
+                        col_data = col_data.map_elements(
+                            lambda x: transform_fn(x, **transform.params) if transform.params else transform_fn(x),
+                            return_dtype=pl.Utf8
+                        )
+                    except Exception:
+                        # Skip failed transform
+                        pass
+
+            # Rename to target field name
+            col_data = col_data.alias(target_field)
+
+            # Add to result dataframe
+            if len(result_df) == 0:
+                result_df = pl.DataFrame({target_field: col_data})
+            else:
+                result_df = result_df.with_columns(col_data)
+
+        # Add any required fields with defaults if not mapped
+        for field_name, field_spec in model_spec.fields.items():
+            if field_name not in result_df.columns and field_spec.required:
+                if field_spec.default is not None:
+                    # Add column with default value
+                    result_df = result_df.with_columns(
+                        pl.lit(field_spec.default).alias(field_name)
+                    )
+
+        # Keep source_ptr for tracking
+        if "source_ptr" in df.columns and "source_ptr" not in result_df.columns:
+            result_df = result_df.with_columns(df["source_ptr"])
+
+        return result_df
 
     def _create_zip(
         self, output_dir: Path, zip_path: Path, summaries: List[ModelExportSummary]

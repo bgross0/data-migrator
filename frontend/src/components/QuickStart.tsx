@@ -24,6 +24,8 @@ export default function QuickStart() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -39,6 +41,7 @@ export default function QuickStart() {
       setCategories(categoriesData)
     } catch (error) {
       console.error('Failed to load templates:', error)
+      setErrorMessage('Failed to load templates. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -46,13 +49,13 @@ export default function QuickStart() {
 
   const handleTemplateClick = async (templateId: string) => {
     try {
+      setSuccessMessage(null)
+      setErrorMessage(null)
       const result = await templatesApi.instantiate(templateId)
-      console.log('Template instantiated:', result)
-      // TODO: Navigate to graph editor or show success message
-      alert(`Graph created! Graph ID: ${result.graphId}`)
+      setSuccessMessage(`Graph created from template. Graph ID: ${result.graphId}`)
     } catch (error) {
       console.error('Failed to instantiate template:', error)
-      alert('Failed to create graph from template')
+      setErrorMessage('Failed to create graph from template.')
     }
   }
 
@@ -81,6 +84,27 @@ export default function QuickStart() {
           <p className="text-gray-600">Choose a guided template to import your data</p>
         </div>
       </div>
+      {(successMessage || errorMessage) && (
+        <div className="mb-4 space-y-2 text-sm">
+          {successMessage && (
+            <div className="space-y-1 rounded border border-green-200 bg-green-50 px-4 py-2 text-green-700">
+              <p>{successMessage}</p>
+              <p className="text-sm">
+                Head to the{' '}
+                <a href={`/runs`} className="underline">
+                  Runs dashboard
+                </a>{' '}
+                to track progress.
+              </p>
+            </div>
+          )}
+          {errorMessage && (
+            <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-red-700">
+              {errorMessage}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Category filters */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">

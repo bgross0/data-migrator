@@ -222,7 +222,8 @@ class GraphService:
             status="queued",
             started_at=datetime.utcnow(),
             progress=0,
-            logs=[]
+            logs=[],
+            context={}
         )
 
         self.db.add(run)
@@ -234,21 +235,31 @@ class GraphService:
         """Get a run by ID"""
         return self.db.query(GraphRun).filter(GraphRun.id == run_id).first()
 
-    def list_runs(self, graph_id: Optional[str] = None, limit: int = 100) -> List[GraphRun]:
+    def list_runs(self, graph_id: Optional[str] = None, limit: int = 100, offset: int = 0) -> List[GraphRun]:
         """List runs, optionally filtered by graph_id"""
         query = self.db.query(GraphRun)
         if graph_id:
             query = query.filter(GraphRun.graph_id == graph_id)
-        return query.order_by(GraphRun.started_at.desc()).limit(limit).all()
+        return (
+            query.order_by(GraphRun.started_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
 
     def update_run_status(
         self,
         run_id: str,
         status: str,
         progress: Optional[int] = None,
-        error_message: Optional[str] = None
+        error_message: Optional[str] = None,
+        current_node: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+        finished_at: Optional[datetime] = None,
     ) -> Optional[GraphRun]:
         """Update run status"""
+        from sqlalchemy.orm.attributes import flag_modified
+
         run = self.get_run(run_id)
         if not run:
             return None
@@ -256,10 +267,51 @@ class GraphService:
         run.status = status
         if progress is not None:
             run.progress = progress
-        if error_message:
+        if current_node is not None:
+            run.current_node = current_node
+        if context is not None:
+            run.context = context
+            # Mark JSON column as modified
+            flag_modified(run, "context")
+        if error_message is not None:
             run.error_message = error_message
-        if status in ['completed', 'failed']:
+        if finished_at is not None:
+            if isinstance(finished_at, datetime):
+                run.finished_at = finished_at
+            elif isinstance(finished_at, str):
+                try:
+                    run.finished_at = datetime.fromisoformat(finished_at)
+                except ValueError:
+                    run.finished_at = datetime.utcnow()
+        elif status in ["completed", "failed"]:
             run.finished_at = datetime.utcnow()
+
+        self.db.commit()
+        self.db.refresh(run)
+        return run
+
+    def append_log(self, run_id: str, message: str, level: str = "info") -> Optional[GraphRun]:
+        """Append a log entry to the run"""
+        from sqlalchemy.orm.attributes import flag_modified
+
+        run = self.get_run(run_id)
+        if not run:
+            return None
+
+        # Initialize logs if None
+        if run.logs is None:
+            run.logs = []
+
+        # Append new log entry
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "level": level,
+            "message": message
+        }
+        run.logs.append(log_entry)
+
+        # Mark the column as modified so SQLAlchemy persists the change
+        flag_modified(run, "logs")
 
         self.db.commit()
         self.db.refresh(run)

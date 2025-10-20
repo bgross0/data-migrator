@@ -1,0 +1,205 @@
+data-migrator/
+│
+├── backend/                          # FastAPI Backend
+│   ├── alembic/                      # Database migrations
+│   │   ├── versions/                 # Migration files
+│   │   │   ├── 1760583762_create_exceptions_table.py  ★ NEW
+│   │   │   ├── 8204a2bbd178_initial_schema.py
+│   │   │   └── ... (8 migrations total)
+│   │   └── env.py
+│   │
+│   ├── app/                          # Main application
+│   │   ├── adapters/                 # ★ Hexagonal architecture adapters
+│   │   │   ├── repositories_sqlite.py  ★ SQLite implementations
+│   │   │   └── tasks_inline.py
+│   │   │
+│   │   ├── api/                      # REST API endpoints
+│   │   │   ├── datasets.py
+│   │   │   ├── exports.py            ★ NEW: Deterministic export API
+│   │   │   ├── exceptions.py         ★ NEW: Exception tracking API
+│   │   │   ├── imports.py
+│   │   │   ├── mappings.py
+│   │   │   ├── templates.py          ★ NEW: Template API
+│   │   │   └── ... (11 endpoints)
+│   │   │
+│   │   ├── cleaners/                 # Data cleaning rules
+│   │   │   ├── data_cleaner.py
+│   │   │   └── rules/
+│   │   │       ├── column_name.py
+│   │   │       ├── whitespace.py
+│   │   │       └── ...
+│   │   │
+│   │   ├── connectors/               # External systems
+│   │   │   └── odoo.py               # Odoo JSON-RPC client
+│   │   │
+│   │   ├── core/                     # Core logic
+│   │   │   ├── profiler.py           # Column analysis
+│   │   │   ├── matcher.py            # Field matching
+│   │   │   ├── hybrid_matcher.py     # Enhanced matching
+│   │   │   ├── transformer.py        # Transform registry
+│   │   │   ├── database.py
+│   │   │   ├── config.py
+│   │   │   └── ...
+│   │   │
+│   │   ├── export/                   # ★ NEW: Deterministic export
+│   │   │   ├── csv_emitter.py        ★ Deterministic CSV writer
+│   │   │   ├── idgen.py              ★ External ID generation
+│   │   │   └── order.py
+│   │   │
+│   │   ├── field_mapper/             # Advanced field mapping
+│   │   │   ├── matching/
+│   │   │   │   ├── matching_pipeline.py
+│   │   │   │   └── strategies/
+│   │   │   │       ├── exact_name_match.py
+│   │   │   │       ├── fuzzy_match.py
+│   │   │   │       ├── contextual_match.py
+│   │   │   │       └── ... (8 strategies)
+│   │   │   ├── core/
+│   │   │   │   ├── knowledge_base.py
+│   │   │   │   └── module_registry.py
+│   │   │   └── ...
+│   │   │
+│   │   ├── generators/               # Code generation
+│   │   │   └── addon.py              # Odoo addon generator
+│   │   │
+│   │   ├── importers/                # Import execution
+│   │   │   ├── graph.py              # Topological sort
+│   │   │   └── executor.py           # Two-phase importer
+│   │   │
+│   │   ├── models/                   # SQLAlchemy ORM
+│   │   │   ├── source.py             # Dataset, Sheet
+│   │   │   ├── mapping.py            # Mapping, FieldMapping
+│   │   │   ├── run.py                # Run, RunLog, KeyMap
+│   │   │   ├── exception.py          ★ NEW: Exception model
+│   │   │   └── ... (7 models)
+│   │   │
+│   │   ├── ports/                    # ★ Hexagonal architecture ports
+│   │   │   ├── repositories.py       ★ Abstract interfaces
+│   │   │   └── tasks.py
+│   │   │
+│   │   ├── registry/                 # ★ NEW: YAML registry
+│   │   │   └── loader.py             ★ Registry loader
+│   │   │
+│   │   ├── schemas/                  # Pydantic schemas
+│   │   │   ├── dataset.py
+│   │   │   ├── export.py             ★ NEW: Export schemas
+│   │   │   ├── exception.py          ★ NEW: Exception schemas
+│   │   │   ├── template.py           ★ NEW: Template schemas
+│   │   │   └── ... (7 schemas)
+│   │   │
+│   │   ├── services/                 # Business logic
+│   │   │   ├── dataset_service.py
+│   │   │   ├── export_service.py     ★ NEW: Export orchestrator
+│   │   │   ├── import_service.py
+│   │   │   ├── mapping_service.py
+│   │   │   ├── template_service.py   ★ NEW: Template service
+│   │   │   └── ... (10 services)
+│   │   │
+│   │   ├── transform/                # ★ NEW: Normalizers
+│   │   │   ├── normalizers.py        ★ Idempotent normalizers
+│   │   │   └── rules.py              ★ Rules DSL
+│   │   │
+│   │   ├── validate/                 # ★ NEW: Validation
+│   │   │   └── validator.py          ★ Validation pipeline
+│   │   │
+│   │   └── main.py                   # FastAPI app
+│   │
+│   ├── registry/                     # ★ NEW: YAML configuration
+│   │   ├── odoo.yaml                 ★ Central registry (923 lines)
+│   │   └── seeds/                    ★ Seed data with synonyms
+│   │       ├── crm_stages.yaml
+│   │       ├── crm_lost_reasons.yaml
+│   │       ├── teams_users.yaml
+│   │       └── utm.yaml
+│   │
+│   ├── samples/                      # ★ NEW: Sample data
+│   │   ├── partners.csv              ★ 3 partner records
+│   │   └── leads.csv                 ★ 3 lead records
+│   │
+│   ├── templates/                    # ★ NEW: Migration templates
+│   │   ├── essential_setup.json
+│   │   ├── sales_crm.json
+│   │   ├── projects.json
+│   │   ├── accounting.json
+│   │   └── complete_migration.json
+│   │
+│   ├── tests/                        # Test suite
+│   │   ├── test_registry_loader.py   ★ NEW: 20 tests
+│   │   ├── test_normalizers.py       ★ NEW: 39 tests (100% passing)
+│   │   ├── test_validator.py         ★ NEW: 10 tests (100% passing)
+│   │   ├── test_csv_emitter.py       ★ NEW: 9 tests (100% passing)
+│   │   ├── test_determinism.py       ★ NEW: 5 tests (100% passing)
+│   │   └── matcher_validation/       # Matcher test harness
+│   │       ├── test_harness.py
+│   │       ├── ground_truth.py
+│   │       └── reports/
+│   │
+│   ├── Makefile                      ★ NEW: Build automation
+│   ├── requirements.txt
+│   └── .env
+│
+├── frontend/                         # React SPA
+│   ├── src/
+│   │   ├── components/               # UI components
+│   │   │   ├── Layout.tsx
+│   │   │   ├── QuickStart.tsx        ★ NEW: Quick start guide
+│   │   │   ├── SpreadsheetPreview.tsx
+│   │   │   ├── TransformModal.tsx
+│   │   │   └── ... (14 components)
+│   │   │
+│   │   ├── pages/                    # Main views
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── DatasetDetail.tsx
+│   │   │   ├── Mappings.tsx
+│   │   │   ├── Import.tsx
+│   │   │   ├── FlowView.tsx          # Graph visualization
+│   │   │   └── ... (7 pages)
+│   │   │
+│   │   ├── services/
+│   │   │   └── api.ts                # Axios client
+│   │   │
+│   │   ├── types/
+│   │   │   ├── mapping.ts
+│   │   │   └── graph.ts
+│   │   │
+│   │   ├── visualizer/               # Graph visualization
+│   │   │   ├── FlowCanvas.tsx
+│   │   │   ├── InspectorPanel.tsx
+│   │   │   ├── layout.ts
+│   │   │   ├── useGraphStore.ts
+│   │   │   └── nodes/
+│   │   │       ├── SheetNode.tsx
+│   │   │       ├── FieldNode.tsx
+│   │   │       ├── TransformNode.tsx
+│   │   │       └── ... (8 node types)
+│   │   │
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   │
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+│
+├── storage/                          # Runtime storage
+│   ├── uploads/                      # Uploaded files
+│   ├── profiles/                     # Column profiles
+│   ├── addons/                       # Generated addons
+│   └── exports/                      # ★ Exported CSVs
+│
+├── docs/                             # Documentation
+│   └── architecture/
+│       ├── ARCHITECTURE.yaml
+│       ├── EXECUTION_FLOWS.md
+│       └── critical_paths.py
+│
+└── *.md                              # Root documentation
+    ├── CLAUDE.md                     # Claude Code instructions
+    ├── README.md                     # Main overview
+    ├── ARCHITECTURE.md               # System architecture
+    ├── VALIDATION_REPORT.md          ★ NEW: Validation report
+    ├── REPO_STRUCTURE.md             ★ NEW: This document
+    └── ... (15+ docs)
+
+
+Legend:
+★ NEW = Added in last session (deterministic export system)

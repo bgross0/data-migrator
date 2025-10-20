@@ -217,7 +217,9 @@ class MatchingPipeline:
             logger.info(f"Module selection provides {len(target_models)} models")
 
         # Detect candidate models from all columns (for contextual matching)
-        candidate_models = self._detect_candidate_models(column_profiles)
+        # Extract sheet_name from column_profiles if not provided as parameter
+        sheet_name_for_detection = column_profiles[0].sheet_name if column_profiles else sheet_name
+        candidate_models = self._detect_candidate_models(column_profiles, sheet_name_for_detection)
 
         # If we have selected modules, constrain candidate models
         if target_models:
@@ -527,7 +529,8 @@ class MatchingPipeline:
 
     def _detect_candidate_models(
         self,
-        column_profiles: List[ColumnProfile]
+        column_profiles: List[ColumnProfile],
+        sheet_name: Optional[str] = None
     ) -> Set[str]:
         """
         Detect candidate models using intelligent business context analysis.
@@ -537,6 +540,7 @@ class MatchingPipeline:
 
         Args:
             column_profiles: List of ColumnProfile objects
+            sheet_name: Optional sheet name for additional context
 
         Returns:
             Set of likely model names
@@ -544,8 +548,11 @@ class MatchingPipeline:
         logger.info("Detecting candidate models using business context analysis")
 
         # 1. Use BusinessContextAnalyzer to detect domain and get recommended models
+        # Pass sheet_name for strong signal about user intent
         recommended_models = self.business_analyzer.get_recommended_models(
-            column_profiles, max_models=10
+            column_profiles,
+            sheet_name=sheet_name,
+            max_models=10
         )
 
         # 2. Get user-selected modules if available (would need to be passed in)

@@ -74,3 +74,4 @@ celerybeat.pid
 
 # MCP Server (keep config, ignore venv)
 mcp-server/venv/
+.claude/

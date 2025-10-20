@@ -253,7 +253,8 @@ export const graphsApi = {
   },
 
   run: async (graphId: string, datasetId?: number) => {
-    const response = await api.post(`/graphs/${graphId}/run`, { dataset_id: datasetId })
+    const config = datasetId !== undefined ? { params: { dataset_id: datasetId } } : {}
+    const response = await api.post(`/graphs/${graphId}/run`, null, config)
     return response.data
   },
 

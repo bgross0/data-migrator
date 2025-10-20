@@ -47,6 +47,9 @@ class TemplateService:
                 if category and data.get("category") != category:
                     continue
 
+                # For efficiency, just mark as not completed for now
+                # (checking progress for each template could be slow)
+                # The frontend can query individual template progress if needed
                 templates.append(TemplateListItem(
                     id=data["id"],
                     name=data["name"],
@@ -56,7 +59,7 @@ class TemplateService:
                     estimatedTime=data["estimatedTime"],
                     difficulty=data["difficulty"],
                     modelCount=len(data["models"]),
-                    completed=False  # TODO: Check against completed runs
+                    completed=False  # Frontend should query progress separately if needed
                 ))
             except Exception as e:
                 print(f"Error loading template {template_file}: {e}")
@@ -102,19 +105,59 @@ class TemplateService:
             template_id: Template identifier
 
         Returns:
-            Progress information
+            Progress information calculated from actual GraphRun records
         """
         template = self.get_template(template_id)
         if not template:
             return None
 
-        # TODO: Query GraphRun table to find completed models
-        # For now, return zero progress
+        # Query for graphs created from this template
+        from app.models.graph import Graph, GraphRun
+
+        # Get all graphs and filter in Python to avoid SQL JSON operator issues
+        all_graphs = self.db.query(Graph).all()
+
+        # Filter graphs that were created from this template
+        graphs = []
+        for graph in all_graphs:
+            if graph.spec and isinstance(graph.spec, dict):
+                metadata = graph.spec.get("metadata", {})
+                if metadata.get("template_id") == template_id:
+                    graphs.append(graph)
+
+        completed_models = set()
+        latest_run = None
+
+        # Find the most recent run and collect completed models
+        for graph in graphs:
+            runs = self.db.query(GraphRun).filter(
+                GraphRun.graph_id == graph.id
+            ).order_by(GraphRun.started_at.desc()).all()
+
+            for run in runs:
+                if latest_run is None or run.started_at > latest_run.started_at:
+                    latest_run = run
+
+                # Extract completed models from run context
+                if run.context and "executed_nodes" in run.context:
+                    for node in run.context["executed_nodes"]:
+                        completed_models.add(node)
+
+                # Also check for completed status
+                if run.status == "completed" and run.context and "plan" in run.context:
+                    # If run completed successfully, all planned models are complete
+                    for model in run.context["plan"]:
+                        completed_models.add(model)
+
+        # Calculate completion percentage
+        completed_list = list(completed_models)
+        percent_complete = int((len(completed_list) / len(template.models) * 100)) if template.models else 0
+
         return TemplateProgress(
             templateId=template_id,
-            completedModels=[],
+            completedModels=completed_list,
             totalModels=len(template.models),
-            percentComplete=0
+            percentComplete=percent_complete
         )
 
     def instantiate_template(

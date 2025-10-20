@@ -56,3 +56,4 @@ class Sheet(Base):
     # Relationships
     dataset = relationship("Dataset", back_populates="sheets")
     column_profiles = relationship("ColumnProfile", back_populates="sheet", cascade="all, delete-orphan")
+    mappings = relationship("Mapping", back_populates="sheet", cascade="all, delete-orphan")

@@ -39,8 +39,10 @@ class GraphRun(Base):
     started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     finished_at = Column(DateTime, nullable=True)
     progress = Column(Integer, default=0, nullable=False)  # 0-100
+    current_node = Column(String, nullable=True)
     logs = Column(JSON, nullable=True)  # Array of log entries
     stats = Column(JSON, nullable=True)  # Execution statistics
+    context = Column(JSON, nullable=True)  # Arbitrary run metadata
     error_message = Column(Text, nullable=True)
 
     # Relationships

@@ -6,7 +6,7 @@ to identify the business domain and appropriate Odoo models.
 """
 from typing import List, Dict, Set, Tuple, Optional
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 
 from ..core.data_structures import ColumnProfile
@@ -21,6 +21,7 @@ class DomainSignature:
     optional_columns: Set[str]  # Nice to have
     models: List[str]  # Relevant Odoo models for this domain
     confidence_threshold: float = 0.6
+    sheet_name_patterns: Set[str] = field(default_factory=set)  # Sheet name hints for this domain
 
 
 class BusinessContextAnalyzer:
@@ -32,6 +33,7 @@ class BusinessContextAnalyzer:
     - Data value analysis
     - Statistical properties
     - Semantic relationships
+    - Sheet name signals
     """
 
     # Define business domain signatures
@@ -53,7 +55,8 @@ class BusinessContextAnalyzer:
                 "account.analytic.line",
                 "sale.order",
                 "product.product"
-            ]
+            ],
+            sheet_name_patterns={"sales", "revenue", "orders", "order", "sales_data"}
         ),
         DomainSignature(
             name="financial_analysis",
@@ -71,7 +74,8 @@ class BusinessContextAnalyzer:
                 "account.analytic.account",
                 "account.move.line",
                 "account.move"
-            ]
+            ],
+            sheet_name_patterns={"financial", "finance", "analysis", "analytic", "profit", "report"}
         ),
         DomainSignature(
             name="inventory",
@@ -89,7 +93,8 @@ class BusinessContextAnalyzer:
                 "stock.quant",
                 "stock.move",
                 "stock.picking"
-            ]
+            ],
+            sheet_name_patterns={"inventory", "stock", "warehouse", "products", "items"}
         ),
         DomainSignature(
             name="customer_contacts",
@@ -102,9 +107,11 @@ class BusinessContextAnalyzer:
                 "website", "fax", "notes", "type", "category"
             },
             models=[
-                "res.partner"  # Primary model for contacts - removed crm.lead to be more focused
+                "res.partner",  # Primary model for pure contact lists
+                "crm.lead"      # Also valid for leads with contact info
             ],
-            confidence_threshold=0.4  # Lower threshold for customer data
+            confidence_threshold=0.6,  # Increased from 0.4 for more selectivity
+            sheet_name_patterns={"customers", "contacts", "clients", "partners", "vendors", "suppliers"}
         ),
         DomainSignature(
             name="hr_timesheet",
@@ -121,7 +128,8 @@ class BusinessContextAnalyzer:
                 "account.analytic.line",
                 "hr.employee",
                 "project.task"
-            ]
+            ],
+            sheet_name_patterns={"timesheet", "hours", "time", "employee", "staff"}
         ),
         DomainSignature(
             name="purchase_orders",
@@ -139,7 +147,8 @@ class BusinessContextAnalyzer:
                 "purchase.order",
                 "purchase.order.line",
                 "account.move"
-            ]
+            ],
+            sheet_name_patterns={"purchase", "po", "vendor", "procurement"}
         ),
         DomainSignature(
             name="invoices",
@@ -157,7 +166,32 @@ class BusinessContextAnalyzer:
                 "account.move",
                 "account.move.line",
                 "account.payment"
-            ]
+            ],
+            sheet_name_patterns={"invoice", "invoices", "bill", "bills", "payment"}
+        ),
+        DomainSignature(
+            name="sales_pipeline",
+            required_columns={
+                "lead", "opportunity", "stage", "pipeline",
+                "probability", "expected_revenue", "expected_close", "deal"
+            },
+            optional_columns={
+                "name", "company", "partner", "contact", "title",
+                "email", "phone", "mobile", "address",
+                "source", "campaign", "medium", "channel",
+                "description", "notes", "next_action", "priority",
+                "tag", "tags", "lost_reason", "type", "status",
+                "salesperson", "sales_rep", "owner", "assigned"
+            },
+            models=[
+                "crm.lead",  # Primary model for leads/opportunities
+                "crm.stage",
+                "utm.campaign",
+                "utm.source",
+                "utm.medium"
+            ],
+            confidence_threshold=0.5,
+            sheet_name_patterns={"lead", "leads", "opportunity", "opportunities", "pipeline", "deal", "deals"}
         )
     ]
 
@@ -168,6 +202,7 @@ class BusinessContextAnalyzer:
     def analyze_context(
         self,
         column_profiles: List[ColumnProfile],
+        sheet_name: Optional[str] = None,
         top_n: int = 5
     ) -> Dict[str, float]:
         """
@@ -175,6 +210,7 @@ class BusinessContextAnalyzer:
 
         Args:
             column_profiles: List of column profiles from the spreadsheet
+            sheet_name: Optional sheet name for context (strong signal for model detection)
             top_n: Number of top models to return
 
         Returns:
@@ -182,12 +218,18 @@ class BusinessContextAnalyzer:
         """
         logger.info(f"Analyzing business context for {len(column_profiles)} columns")
 
+        # Extract sheet name from profiles if not provided
+        if not sheet_name and column_profiles:
+            sheet_name = column_profiles[0].sheet_name
+            if sheet_name:
+                logger.info(f"Extracted sheet name from profiles: '{sheet_name}'")
+
         # Extract column names and normalize
         column_names = [self._normalize_column_name(p.column_name) for p in column_profiles]
         column_name_set = set(column_names)
 
-        # Detect matching domains
-        domain_scores = self._score_domains(column_name_set, column_profiles)
+        # Detect matching domains (based on column patterns AND sheet name)
+        domain_scores = self._score_domains(column_name_set, column_profiles, sheet_name)
 
         # Get models from top matching domains
         model_scores = self._aggregate_model_scores(domain_scores)
@@ -221,7 +263,8 @@ class BusinessContextAnalyzer:
     def _score_domains(
         self,
         column_names: Set[str],
-        column_profiles: List[ColumnProfile]
+        column_profiles: List[ColumnProfile],
+        sheet_name: Optional[str] = None
     ) -> List[Tuple[DomainSignature, float]]:
         """
         Score each domain signature against the column set.
@@ -229,6 +272,7 @@ class BusinessContextAnalyzer:
         Args:
             column_names: Set of normalized column names
             column_profiles: List of column profiles with data patterns
+            sheet_name: Optional sheet name for domain matching
 
         Returns:
             List of (DomainSignature, score) tuples
@@ -237,11 +281,14 @@ class BusinessContextAnalyzer:
 
         for domain in self.DOMAIN_SIGNATURES:
             score = self._calculate_domain_score(
-                domain, column_names, column_profiles
+                domain, column_names, column_profiles, sheet_name
             )
             if score >= domain.confidence_threshold:
                 domain_scores.append((domain, score))
-                logger.debug(f"Domain '{domain.name}' scored {score:.2f}")
+                logger.info(
+                    f"Domain '{domain.name}' matched with score {score:.2f} "
+                    f"(threshold: {domain.confidence_threshold}) → models: {domain.models}"
+                )
 
         return domain_scores
 
@@ -249,15 +296,23 @@ class BusinessContextAnalyzer:
         self,
         domain: DomainSignature,
         column_names: Set[str],
-        column_profiles: List[ColumnProfile]
+        column_profiles: List[ColumnProfile],
+        sheet_name: Optional[str] = None
     ) -> float:
         """
         Calculate matching score for a domain signature.
+
+        Combines four weighted components:
+        - Required columns (50%): Must-have column patterns
+        - Optional columns (15%): Nice-to-have patterns
+        - Pattern boost (15%): Data value patterns (email, currency, dates)
+        - Sheet name boost (20%): Sheet name pattern matches
 
         Args:
             domain: Domain signature to test
             column_names: Set of column names
             column_profiles: Column profiles with patterns
+            sheet_name: Optional sheet name for domain matching
 
         Returns:
             Score between 0.0 and 1.0
@@ -297,11 +352,26 @@ class BusinessContextAnalyzer:
         # Check data patterns for additional confidence
         pattern_boost = self._calculate_pattern_boost(domain, column_profiles)
 
-        # Weighted score: required columns are most important
+        # Sheet name boost - check if sheet name matches this domain's patterns
+        sheet_name_boost = 0.0
+        if sheet_name and domain.sheet_name_patterns:
+            sheet_lower = sheet_name.lower()
+            for pattern in domain.sheet_name_patterns:
+                if pattern in sheet_lower:
+                    sheet_name_boost = 1.0  # Full boost if match found
+                    logger.info(
+                        f"Sheet name '{sheet_name}' matches domain '{domain.name}' "
+                        f"pattern '{pattern}'"
+                    )
+                    break  # First match wins
+
+        # Weighted score with sheet name as a component
+        # Adjusted weights to accommodate sheet name signal:
         final_score = (
-            required_score * 0.6 +
-            optional_score * 0.2 +
-            pattern_boost * 0.2
+            required_score * 0.5 +       # Reduced from 0.6 to make room
+            optional_score * 0.15 +      # Reduced from 0.2
+            pattern_boost * 0.15 +       # Reduced from 0.2
+            sheet_name_boost * 0.2       # NEW: 20% weight for sheet name
         )
 
         return min(1.0, final_score)
@@ -451,6 +521,7 @@ class BusinessContextAnalyzer:
     def get_recommended_models(
         self,
         column_profiles: List[ColumnProfile],
+        sheet_name: Optional[str] = None,
         max_models: int = 3
     ) -> List[str]:
         """
@@ -458,12 +529,17 @@ class BusinessContextAnalyzer:
 
         Args:
             column_profiles: List of column profiles
+            sheet_name: Optional sheet name for additional context
             max_models: Maximum number of models to return
 
         Returns:
             List of recommended model names
         """
-        model_scores = self.analyze_context(column_profiles, top_n=max_models * 2)
+        model_scores = self.analyze_context(
+            column_profiles,
+            sheet_name=sheet_name,
+            top_n=max_models * 2
+        )
 
         # Filter to only high-confidence models
         recommended = [

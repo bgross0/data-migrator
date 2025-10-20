@@ -17,8 +17,8 @@ import_order:
   - utm.campaign
   - crm.lost.reason
   - crm.lead
-  - mail.activity
   - project.project
+  - project.task
   - sale.order
   - sale.order.line
   - account.move
@@ -892,3 +892,269 @@ models:
       user_id:
         type: m2o
         target: res.users
+
+  res.partner.industry:
+    csv: export_res_partner_industry.csv
+    id_template: "industry_{slug(name)}"
+    headers: ["id", "name", "full_name", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      full_name:
+        type: string
+      active:
+        type: bool
+        default: true
+
+  crm.team:
+    csv: export_crm_team.csv
+    id_template: "team_{slug(name)}"
+    headers: ["id", "name", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      active:
+        type: bool
+        default: true
+
+  utm.source:
+    csv: export_utm_source.csv
+    id_template: "utm_source_{slug(name)}"
+    headers: ["id", "name"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+
+  utm.medium:
+    csv: export_utm_medium.csv
+    id_template: "utm_medium_{slug(name)}"
+    headers: ["id", "name"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+
+  utm.campaign:
+    csv: export_utm_campaign.csv
+    id_template: "utm_campaign_{slug(name)}"
+    headers: ["id", "name", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      active:
+        type: bool
+        default: true
+
+  crm.lost.reason:
+    csv: export_crm_lost_reason.csv
+    id_template: "lost_reason_{slug(name)}"
+    headers: ["id", "name", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      active:
+        type: bool
+        default: true
+
+  mail.activity:
+    csv: export_mail_activity.csv
+    id_template: "activity_{slug(summary)}"
+    headers: ["id", "summary", "activity_type_id", "activity_type_id/id", "res_model", "res_id", "user_id", "user_id/id", "date_deadline"]
+    fields:
+      id:
+        derived: true
+      summary:
+        type: string
+      activity_type_id:
+        type: m2o
+        target: mail.activity.type
+      activity_type_id/id:
+        type: m2o
+        target: mail.activity.type
+        external_field: activity_type_id
+      res_model:
+        type: string
+      res_id:
+        type: int
+      user_id:
+        type: m2o
+        target: res.users
+      user_id/id:
+        type: m2o
+        target: res.users
+        external_field: user_id
+      date_deadline:
+        type: date
+        transform: normalize_date_any
+
+  project.project:
+    csv: export_project_project.csv
+    id_template: "project_{slug(name)}"
+    headers: ["id", "name", "active", "user_id", "user_id/id", "partner_id", "partner_id/id"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      active:
+        type: bool
+        default: true
+      user_id:
+        type: m2o
+        target: res.users
+      user_id/id:
+        type: m2o
+        target: res.users
+        external_field: user_id
+      partner_id:
+        type: m2o
+        target: res.partner
+      partner_id/id:
+        type: m2o
+        target: res.partner
+        external_field: partner_id
+
+  project.task:
+    csv: export_project_task.csv
+    id_template: "task_{slug(name)}"
+    headers: ["id", "name", "project_id", "project_id/id", "user_id", "user_id/id", "date_deadline", "priority"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      project_id:
+        type: m2o
+        target: project.project
+        required: true
+      project_id/id:
+        type: m2o
+        target: project.project
+        external_field: project_id
+      user_id:
+        type: m2o
+        target: res.users
+      user_id/id:
+        type: m2o
+        target: res.users
+        external_field: user_id
+      date_deadline:
+        type: date
+        transform: normalize_date_any
+      priority:
+        type: enum
+        map:
+          "": "0"
+          low: "0"
+          normal: "1"
+          high: "2"
+          urgent: "3"
+        default: "1"
+
+  mail.activity.type:
+    csv: export_mail_activity_type.csv
+    id_template: "activity_type_{slug(name)}"
+    headers: ["id", "name", "category"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      category:
+        type: enum
+        map:
+          meeting: "meeting"
+          email: "email"
+          call: "call"
+          todo: "to_do"
+          upload: "upload"
+          note: "note"
+        default: "meeting"
+
+  account.payment.term:
+    csv: export_account_payment_term.csv
+    id_template: "payment_term_{slug(name)}"
+    headers: ["id", "name", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      active:
+        type: bool
+        default: true
+
+  account.account:
+    csv: export_account_account.csv
+    id_template: "account_{slug(code)}"
+    headers: ["id", "code", "name", "user_type_id", "user_type_id/id"]
+    fields:
+      id:
+        derived: true
+      code:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
+      user_type_id:
+        type: m2o
+        target: account.account.type
+      user_type_id/id:
+        type: m2o
+        target: account.account.type
+        external_field: user_type_id
+
+  account.account.type:
+    csv: export_account_account_type.csv
+    id_template: "account_type_{slug(name)}"
+    headers: ["id", "name", "type"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      type:
+        type: enum
+        map:
+          receivable: "receivable"
+          payable: "payable"
+          liquidity: "liquidity"
+          other: "other"
+        default: "other"
+
+  account.analytic.account:
+    csv: export_account_analytic_account.csv
+    id_template: "analytic_account_{slug(name)}"
+    headers: ["id", "name", "active"]
+    fields:
+      id:
+        derived: true
+      name:
+        required: true
+        type: string
+      active:
+        type: bool
+        default: true

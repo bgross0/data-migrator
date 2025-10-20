@@ -108,8 +108,9 @@ async def run_graph(
     db: Session = Depends(get_db)
 ):
     """
-    Execute a graph (enqueue Celery task)
-    TODO: Implement actual Celery task execution
+    Execute a graph in the background using InlineTaskRunner.
+
+    Returns immediately with a run ID that can be used to track progress.
     """
     service = GraphService(db)
     graph = service.get_graph(graph_id)
@@ -133,20 +134,53 @@ async def run_graph(
     # Create run record
     run = service.create_run(graph_id, dataset_id)
 
-    # TODO: Enqueue Celery task here
-    # from app.tasks.graph_tasks import execute_graph
-    # task = execute_graph.delay(run.id)
+    # Execute the graph in background using shared task runner singleton
+    from app.core.task_runner import get_task_runner
+    from app.services.graph_execute_service import GraphExecuteService
 
+    # Get shared task runner singleton
+    task_runner = get_task_runner()
+
+    def execute_graph_background():
+        """Execute graph in background thread."""
+        # Create new DB session for background thread
+        from app.core.database import SessionLocal
+        db_thread = SessionLocal()
+        try:
+            execute_service = GraphExecuteService(db_thread)
+            result = execute_service.execute_graph_export(
+                dataset_id=dataset_id,
+                graph_id=graph_id,
+                run_id=run.id  # Pass the run ID for concurrent safety
+            )
+            return result
+        finally:
+            db_thread.close()
+
+    # Submit task for background execution
+    task_id = task_runner.submit(
+        execute_graph_background,
+        task_id=run.id  # Use run ID as task ID
+    )
+
+    # Return immediately with run ID
     return GraphRunResponse(
         id=run.id,
-        status=run.status,
-        message="Graph execution queued"
+        status="queued",
+        message=f"Graph execution queued with task ID: {task_id}"
     )
 
 
 @router.get("/graphs/{graph_id}/runs")
 async def list_graph_runs(graph_id: str, db: Session = Depends(get_db)):
-    """List all runs for a graph"""
+    """
+    List all runs for a graph with detailed execution information.
+
+    Returns array of runs including:
+    - current_node: The model being processed in each run
+    - context: Execution context with plan and progress details
+    - logs: Array of timestamped log entries for each run
+    """
     service = GraphService(db)
     runs = service.list_runs(graph_id=graph_id)
 
@@ -159,8 +193,11 @@ async def list_graph_runs(graph_id: str, db: Session = Depends(get_db)):
             "started_at": run.started_at.isoformat() if run.started_at else None,
             "finished_at": run.finished_at.isoformat() if run.finished_at else None,
             "progress": run.progress,
-            "logs": run.logs or [],
-            "stats": run.stats
+            "current_node": run.current_node,  # Direct access, no getattr
+            "context": run.context or {},  # Direct access with default
+            "logs": run.logs or [],  # Direct access with default
+            "stats": run.stats,
+            "error_message": run.error_message,
         }
         for run in runs
     ]
@@ -168,7 +205,14 @@ async def list_graph_runs(graph_id: str, db: Session = Depends(get_db)):
 
 @router.get("/runs/{run_id}")
 async def get_run_status(run_id: str, db: Session = Depends(get_db)):
-    """Get status of a specific run"""
+    """
+    Get detailed status of a specific run.
+
+    Returns complete execution state including:
+    - current_node: The model being processed
+    - context: Execution context with plan and progress details
+    - logs: Array of timestamped log entries
+    """
     service = GraphService(db)
     run = service.get_run(run_id)
 
@@ -178,6 +222,7 @@ async def get_run_status(run_id: str, db: Session = Depends(get_db)):
             detail=f"Run {run_id} not found"
         )
 
+    # Ensure all fields are properly exposed
     return {
         "id": run.id,
         "graph_id": run.graph_id,
@@ -186,8 +231,11 @@ async def get_run_status(run_id: str, db: Session = Depends(get_db)):
         "started_at": run.started_at.isoformat() if run.started_at else None,
         "finished_at": run.finished_at.isoformat() if run.finished_at else None,
         "progress": run.progress,
-        "logs": run.logs or [],
+        "current_node": run.current_node,  # Direct access, no getattr
+        "context": run.context or {},  # Direct access with default
+        "logs": run.logs or [],  # Direct access with default
         "stats": run.stats,
+        "error_message": run.error_message,
     }
 
 

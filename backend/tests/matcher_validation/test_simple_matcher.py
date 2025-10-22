@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
 """
-Test the simple HeaderMatcher against the validation suite.
+Validate the HybridMatcher against the ground-truth suite.
 
-This script tests the existing simple HeaderMatcher (from matcher.py) that uses:
-- Hardcoded patterns from ODOO_FIELD_MAPPINGS
-- Fuzzy string matching
+Uses knowledge-base backed matching instead of the deprecated HeaderMatcher.
 """
 import sys
 from pathlib import Path
 
 # Add backend to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+BACKEND_DIR = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(BACKEND_DIR))
 
-from app.core.matcher import HeaderMatcher
+from app.core.hybrid_matcher import HybridMatcher  # noqa: E402
 from ground_truth import GROUND_TRUTH
 import pandas as pd
 
+DICTIONARY_PATH = BACKEND_DIR.parent / "odoo-dictionary"
+
 
 def test_simple_matcher():
-    """Test simple HeaderMatcher with validation test cases."""
+    """Test HybridMatcher with validation test cases."""
     print("="*80)
-    print("TESTING SIMPLE HEADERMATCHER")
+    print("TESTING HYBRID HEADER MATCHER")
     print("="*80)
 
-    print(f"\nInitializing simple HeaderMatcher")
-    matcher = HeaderMatcher(target_model=None)
+    print(f"\nInitializing HybridMatcher")
+    matcher = HybridMatcher(dictionary_path=DICTIONARY_PATH)
 
     # Test 1: Customers
     print("\n" + "="*80)

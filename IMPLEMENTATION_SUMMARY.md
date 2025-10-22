@@ -39,7 +39,7 @@ An export bridge that transforms data-migrator's interactive cleanup work into o
 │  data-migrator (Interactive Discovery & Cleanup)            │
 │  1. User uploads messy CSV                                  │
 │  2. Profiler detects 47 issues (spaces, formats, nulls)     │
-│  3. HeaderMatcher suggests field mappings (AI/fuzzy)        │
+│  3. Hybrid/Deterministic matcher suggests field mappings    │
 │  4. User applies transforms in UI:                          │
 │     - Email: trim, lowercase                                │
 │     - Phone: phone_normalize                                │

@@ -156,14 +156,14 @@ sheet_mappings = self.deterministic_mapper.map_dataframe(
 )
 ```
 
-**HeaderMatcher**: `backend/app/core/matcher.py:48-52`
+**HybridMatcher**: `backend/app/core/hybrid_matcher.py:23-191`
 
 ```python
-# Get allowed models from selected modules if provided
-allowed_models = None
+# Constrain model detection when modules are pre-selected
 if selected_modules:
     registry = get_module_registry()
     allowed_models = registry.get_models_for_groups(selected_modules)
+    print(f"🎯 Constraining model detection to {len(allowed_models)} models from modules: {selected_modules}")
 ```
 
 **MatchingPipeline**: `backend/app/field_mapper/matching/matching_pipeline.py:210-218`
@@ -682,7 +682,7 @@ For each model in execution plan:
 
 **Verified**:
 - MappingService retrieves `selected_modules` (`mapping_service.py:77-79, 162-164, 327-329`)
-- Passes to all matcher implementations (HeaderMatcher, HybridMatcher, DeterministicFieldMapper)
+- Passes to HybridMatcher and DeterministicFieldMapper implementations
 - `get_models_for_groups()` called to convert modules → models
 - `target_models` parameter restricts MatchingPipeline search space
 

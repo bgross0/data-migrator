@@ -210,7 +210,7 @@ modules:
 
         methods:
           - name: "generate_mappings(dataset_id)"
-            approach: "Legacy - uses HeaderMatcher (hardcoded rules)"
+            approach: "Legacy - previously used HeaderMatcher (now removed)"
             when_to_use: "Fallback when deterministic mapper unavailable"
 
           - name: "generate_mappings_v2(dataset_id, use_deterministic=True)"
@@ -235,7 +235,7 @@ modules:
             when_to_use: "When you want best of both worlds"
             flow: |
               Similar to v2 but uses HybridMatcher instead of DeterministicFieldMapper.
-              HybridMatcher = BusinessContextAnalyzer + OdooKnowledgeBase + HeaderMatcher
+              HybridMatcher = BusinessContextAnalyzer + OdooKnowledgeBase + curated patterns
 
           - name: "create_lambda_mapping(dataset_id, sheet_id, target_field, lambda_function, target_model)"
             purpose: "Creates lambda transformation mapping (user-defined)"
@@ -250,7 +250,7 @@ modules:
         dependencies:
           - "DeterministicFieldMapper: For map_dataframe()"
           - "HybridMatcher: For hybrid approach"
-          - "HeaderMatcher: For legacy approach"
+          - "HybridMatcher: Uses knowledge base and curated patterns"
           - "LambdaTransformer: For lambda execution"
           - "Database: Mapping, Suggestion, Dataset, Sheet models"
 
@@ -346,7 +346,7 @@ modules:
         provides: "get_db() dependency for FastAPI"
 
       matcher.py:
-        purpose: "Legacy HeaderMatcher (hardcoded rules)"
+        purpose: "Legacy HeaderMatcher (hardcoded rules) - kept for historical context only"
         note: "Being replaced by DeterministicFieldMapper"
 
       hybrid_matcher.py:
@@ -493,7 +493,7 @@ decision_trees:
     default: "generate_mappings_v2 (deterministic)"
     options:
       - condition: "use_deterministic=False"
-        method: "generate_mappings (legacy HeaderMatcher)"
+        method: "generate_mappings_v2 (DeterministicFieldMapper) or generate_mappings_hybrid (HybridMatcher)"
         why: "Fallback for testing or if dictionary unavailable"
 
       - condition: "use_deterministic=True (default)"

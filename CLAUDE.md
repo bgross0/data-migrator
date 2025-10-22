@@ -55,7 +55,7 @@ DATABASE_URL=sqlite:///./data_migrator.db
 ### Core Import Pipeline
 
 1. **Upload & Profile** → User uploads spreadsheet → Celery task analyzes columns (data types, patterns, quality metrics)
-2. **Match & Map** → HeaderMatcher suggests Odoo field mappings using exact/fuzzy/AI matching
+2. **Match & Map** → Hybrid/Deterministic matcher suggests Odoo field mappings using the knowledge base
 3. **Transform** → Apply data cleaning rules (trim, normalize phones/emails, split names, etc.)
 4. **Resolve Relationships** → ImportGraph determines topological order (parents before children)
 5. **Two-Phase Import** → TwoPhaseImporter executes:
@@ -69,7 +69,7 @@ DATABASE_URL=sqlite:///./data_migrator.db
 /backend/app
   /core
     profiler.py        # Column analysis (dtype detection, quality metrics)
-    matcher.py         # Header → Odoo field mapping (exact/fuzzy/AI)
+    hybrid_matcher.py  # Knowledge-base-backed header → Odoo field matching
     transformer.py     # Data cleaning transform registry
     field_detector.py  # Field type and validation detection
     celery_app.py      # Celery configuration

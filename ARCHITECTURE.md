@@ -148,7 +148,7 @@ Storage     (Polars)     (Basic/Fuzzy)        (Polars)       (Import/Export)
 ## Core Working Pipeline
 
 1. **Upload & Profile (Synchronous)** → User uploads spreadsheet → Service directly calls ColumnProfiler
-2. **Match & Map (Basic)** → HeaderMatcher suggests mappings using exact/fuzzy patterns
+2. **Match & Map (Basic)** → Hybrid/Deterministic matcher suggests mappings using the knowledge base
 3. **Transform (Lambda)** → Apply lambda expressions through LambdaTransformer
 4. **Import/Export (Synchronous)** → Direct execution through services
 5. **Track (Real-time)** → OperationTracker provides progress updates via polling

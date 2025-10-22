@@ -1,10 +1,9 @@
 from sqlalchemy.orm import Session, joinedload
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import polars as pl
 from app.models import Mapping, Dataset, Sheet, ColumnProfile, Suggestion, SourceFile
 from app.schemas.mapping import MappingUpdate
-from app.core.matcher import HeaderMatcher
 from app.models.mapping import MappingStatus
 from app.core.config import settings
 from app.core.lambda_transformer import LambdaTransformer
@@ -62,88 +61,21 @@ class MappingService:
             .filter(Mapping.dataset_id == dataset_id)\
             .all()
 
-    async def generate_mappings(self, dataset_id: int):
-        """Generate mapping suggestions for a dataset."""
-        # Delete existing mappings for this dataset before generating new ones
-        self.db.query(Mapping).filter(Mapping.dataset_id == dataset_id).delete()
-        self.db.commit()
-
-        # Get dataset with sheets
-        dataset = self.db.query(Dataset).filter(Dataset.id == dataset_id).first()
-        if not dataset:
-            return []
-
-        # Get selected modules for this dataset
-        selected_modules = dataset.selected_modules if hasattr(dataset, 'selected_modules') else None
-        if selected_modules:
-            print(f"🎯 Using selected modules for mapping: {selected_modules}")
-
-        all_mappings = []
-
-        # Process each sheet
-        for sheet in dataset.sheets:
-            # Get all column profiles for this sheet
-            profiles = self.db.query(ColumnProfile).filter(
-                ColumnProfile.sheet_id == sheet.id
-            ).all()
-
-            # Get all column names for better model detection
-            column_names = [p.name for p in profiles]
-
-            # Initialize matcher (will auto-detect model based on sheet and columns)
-            matcher = HeaderMatcher(target_model=None)
-
-            # Generate mapping for each column
-            for profile in profiles:
-                # Get suggestions from matcher with full context (including selected modules)
-                candidates = matcher.match(
-                    header=profile.name,
-                    sheet_name=sheet.name,
-                    column_names=column_names,
-                    selected_modules=selected_modules
-                )
-
-                # Create mapping record with top suggestion
-                top_candidate = candidates[0] if candidates else None
-
-                mapping = Mapping(
-                    dataset_id=dataset_id,
-                    sheet_id=sheet.id,
-                    header_name=profile.name,
-                    target_model=top_candidate["model"] if top_candidate else None,
-                    target_field=top_candidate["field"] if top_candidate else None,
-                    confidence=top_candidate["confidence"] if top_candidate else 0.0,
-                    status=MappingStatus.PENDING,
-                    chosen=False,
-                    rationale=top_candidate["rationale"] if top_candidate else None,
-                )
-                self.db.add(mapping)
-                self.db.flush()  # Get the mapping ID
-
-                # Store all candidates as suggestions
-                if candidates:
-                    suggestion = Suggestion(
-                        mapping_id=mapping.id,
-                        candidates=candidates  # Store as JSON
-                    )
-                    self.db.add(suggestion)
-
-                all_mappings.append(mapping)
-
-            self.db.commit()
-
-        return all_mappings
-
     async def generate_mappings_v2(self, dataset_id: int, use_deterministic: bool = True):
         """
         Generate mapping suggestions using the DeterministicFieldMapper.
 
-        This uses the actual odoo-dictionary files instead of hardcoded mappings.
-        Falls back to v1 (hardcoded) if deterministic mapper is not available.
+        This uses the actual odoo-dictionary files for comprehensive model coverage.
+        Routes to HybridMatcher when use_deterministic=False.
         """
-        # Fall back to v1 if deterministic mapper not available
-        if not use_deterministic or not self.deterministic_mapper:
-            return await self.generate_mappings(dataset_id)
+        # If caller requested non-deterministic matching, route to hybrid matcher
+        if not use_deterministic:
+            if self.hybrid_matcher:
+                return await self.generate_mappings_hybrid(dataset_id)
+            raise RuntimeError("Hybrid matcher requested but not configured.")
+
+        if not self.deterministic_mapper:
+            raise RuntimeError("Deterministic field mapper is not available.")
 
         # Delete existing mappings for this dataset before generating new ones
         self.db.query(Mapping).filter(Mapping.dataset_id == dataset_id).delete()
@@ -307,12 +239,10 @@ class MappingService:
         - OdooKnowledgeBase (authoritative field metadata)
         - Hardcoded patterns (deterministic, proven matches)
 
-        Falls back to v1 (simple matcher) if hybrid matcher is not available.
+        Requires the HybridMatcher to be available.
         """
-        # Fall back to v1 if hybrid matcher not available
         if not self.hybrid_matcher:
-            print("HybridMatcher not available, falling back to simple matcher")
-            return await self.generate_mappings(dataset_id)
+            raise RuntimeError("Hybrid matcher is not available.")
 
         # Delete existing mappings for this dataset before generating new ones
         self.db.query(Mapping).filter(Mapping.dataset_id == dataset_id).delete()

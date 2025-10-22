@@ -62,7 +62,7 @@ async def generate_mappings(
     Args:
         dataset_id: ID of the dataset
         use_deterministic: Use deterministic field mapper (odoo-dictionary based) if True,
-                          use hardcoded mappings if False. Defaults to True.
+                          use hybrid matcher (knowledge-base + patterns) if False. Defaults to True.
     """
     service = MappingService(db)
     mappings = await service.generate_mappings_v2(dataset_id, use_deterministic=use_deterministic)

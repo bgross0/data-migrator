@@ -1,0 +1,7 @@
+name,sequence,is_won,fold,description
+New,1,FALSE,FALSE,Initial qualification stage
+Qualified,2,FALSE,FALSE,Lead has been qualified and is being worked
+Proposal,3,FALSE,FALSE,Proposal/quote has been sent
+Negotiation,4,FALSE,FALSE,In negotiation with prospect
+Won,5,TRUE,FALSE,Deal closed successfully
+Lost,6,FALSE,TRUE,Deal lost or opportunity passed

@@ -1,6 +1,0 @@
-Customer ID,Company Name,Contact Email,Phone,City,State,Annual Revenue,Active
-CUST001,Acme Construction,john@acme.com,555-123-4567,Austin,TX,"$1,250,000",Yes
-CUST002,BuildRight LLC,sarah@buildright.com,555-234-5678,Dallas,TX,"$850,000",Yes
-CUST003,Premier Builders,mike@premier.com,555-345-6789,Houston,TX,"$2,100,000",Yes
-CUST004,Quality Homes,lisa@qualityhomes.com,555-456-7890,San Antonio,TX,"$950,000",No
-CUST005,Elite Construction,david@elite.com,555-567-8901,Fort Worth,TX,"$1,750,000",Yes

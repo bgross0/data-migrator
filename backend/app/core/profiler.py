@@ -1,12 +1,22 @@
 """
 Column profiling engine - analyzes spreadsheet columns for data types, quality metrics, patterns.
 Updated to use Polars instead of pandas for better performance.
+
+Uses centralized TypeRegistry for all type detection and parsing.
 """
 import polars as pl
 import pandas as pd  # Still needed for Excel reading until Polars adds native support
 import re
 from typing import Dict, List, Any
 from pathlib import Path
+
+# Import centralized type system
+from app.core.type_system import TypeRegistry, TypeParseError
+
+# Import detection services
+from app.services.column_signature import ColumnSignatureDetector
+from app.services.polymorphic_detector import PolymorphicDetector
+from app.services.pivot_service import PivotDetector
 
 
 class ColumnProfiler:
@@ -54,6 +64,22 @@ class ColumnProfiler:
         """Profile all columns in a Polars dataframe."""
         profiles = []
         n_rows = df.height  # Polars uses .height instead of len()
+        column_names = df.columns
+
+        # Prepare sample data for detectors (first 100 rows as dicts)
+        sample_data = df.head(100).to_dicts()
+
+        # Run entity detection on all columns
+        entity_detector = ColumnSignatureDetector()
+        entity_signatures = entity_detector.detect_entity_type(column_names, sample_data)
+
+        # Run polymorphic detection
+        polymorphic_detector = PolymorphicDetector()
+        polymorphic_signatures = polymorphic_detector.detect_polymorphic_columns(column_names, sample_data)
+
+        # Run pivot detection
+        pivot_detector = PivotDetector()
+        pivot_groups = pivot_detector.detect_pivot_groups(column_names)
 
         for col_name in df.columns:
             series = df[col_name]
@@ -90,6 +116,34 @@ class ColumnProfiler:
                 "patterns": patterns,
                 "sample_values": sample_values,
                 "n_rows": n_rows,
+                # Add detection results
+                "detected_entity": [
+                    {
+                        "entity_type": sig.entity_type,
+                        "confidence": sig.confidence,
+                        "matched_columns": sig.matched_columns
+                    }
+                    for sig in entity_signatures
+                ] if entity_signatures else None,
+                "polymorphic_signature": [
+                    {
+                        "model_col": sig.model_col,
+                        "id_col": sig.id_col,
+                        "confidence": sig.confidence,
+                        "detected_models": sig.detected_models,
+                        "inference": sig.inference
+                    }
+                    for sig in polymorphic_signatures
+                ] if polymorphic_signatures else None,
+                "pivot_group": [
+                    {
+                        "prefix": grp.prefix,
+                        "indices": grp.indices,
+                        "confidence": grp.confidence,
+                        "target_entity": grp.target_entity
+                    }
+                    for grp in pivot_groups
+                ] if pivot_groups else None,
             })
 
         return profiles
@@ -115,7 +169,7 @@ class ColumnProfiler:
         return "string"
 
     def _infer_string_type(self, series: pl.Series) -> str:
-        """Infer specific type for string columns."""
+        """Infer specific type for string columns using centralized TypeRegistry."""
         # Drop nulls for analysis
         series_clean = series.drop_nulls()
 
@@ -129,27 +183,41 @@ class ColumnProfiler:
         if unique_vals.issubset({'true', 'false', 'yes', 'no', '1', '0', 'y', 'n'}):
             return "boolean"
 
-        # Try parsing as datetime
-        try:
-            # Attempt to parse as datetime
-            series_clean.str.to_datetime()
-            return "date"
-        except:
-            pass
+        # Try parsing as datetime using TypeRegistry
+        # Sample first 10 values to avoid expensive parsing
+        sample = series_clean.head(10).to_list()
+        date_success = 0
+        for val in sample:
+            try:
+                if TypeRegistry.parse_date(val):
+                    date_success += 1
+            except TypeParseError:
+                pass
 
-        # Try parsing as numeric
-        try:
-            # Remove currency symbols and commas
-            cleaned = series_clean.str.replace_all(r'[$,]', '')
-            cleaned.cast(pl.Float64)
+        if date_success / len(sample) > 0.7:  # 70% threshold
+            return "date"
+
+        # Try parsing as currency/numeric using TypeRegistry
+        numeric_success = 0
+        for val in sample:
+            try:
+                if TypeRegistry.parse_currency(val) is not None:
+                    numeric_success += 1
+            except TypeParseError:
+                pass
+
+        if numeric_success / len(sample) > 0.7:  # 70% threshold
             return "float"
-        except:
-            pass
 
         return "string"
 
     def detect_patterns(self, series: pl.Series) -> Dict[str, float]:
-        """Detect common patterns in a column (email, phone, etc.)."""
+        """
+        Detect common patterns in a column using centralized TypeRegistry.
+
+        Uses actual parsing validation instead of just regex to ensure
+        patterns match what DataCleaner can actually process.
+        """
         patterns = {}
 
         # Convert to string and drop nulls
@@ -159,23 +227,39 @@ class ColumnProfiler:
             return patterns
 
         total = series_clean.len()
+        values = series_clean.to_list()
 
-        # Email pattern
-        email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-        email_matches = series_clean.str.contains(email_pattern).sum()
-        if email_matches and email_matches > 0:
+        # Email pattern - validate using TypeRegistry
+        email_matches = 0
+        for val in values:
+            try:
+                if TypeRegistry.parse_email(val):
+                    email_matches += 1
+            except TypeParseError:
+                pass
+        if email_matches > 0:
             patterns['email'] = float(email_matches / total)
 
-        # Phone pattern (US format, simple)
-        phone_pattern = r'^\+?1?\s*\(?[0-9]{3}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{4}$'
-        phone_matches = series_clean.str.contains(phone_pattern).sum()
-        if phone_matches and phone_matches > 0:
+        # Phone pattern - validate using TypeRegistry
+        phone_matches = 0
+        for val in values:
+            try:
+                if TypeRegistry.parse_phone(val, default_region='US'):
+                    phone_matches += 1
+            except TypeParseError:
+                pass
+        if phone_matches > 0:
             patterns['phone'] = float(phone_matches / total)
 
-        # Currency pattern
-        currency_pattern = r'^\$?\s?[0-9,]+(\.[0-9]{2})?$'
-        currency_matches = series_clean.str.contains(currency_pattern).sum()
-        if currency_matches and currency_matches > 0:
+        # Currency pattern - validate using TypeRegistry
+        currency_matches = 0
+        for val in values:
+            try:
+                if TypeRegistry.parse_currency(val) is not None:
+                    currency_matches += 1
+            except TypeParseError:
+                pass
+        if currency_matches > 0:
             patterns['currency'] = float(currency_matches / total)
 
         return patterns

@@ -3,13 +3,18 @@ Data cleaning engine - automatically cleans and standardizes spreadsheet data.
 
 This module provides the DataCleaner class which applies intelligent cleaning
 transformations based on detected column types and patterns.
+
+All type parsing/normalization is delegated to the centralized TypeRegistry
+to ensure consistency across the application.
 """
 import polars as pl
 import re
 from typing import Dict, List, Any, Tuple
 from datetime import datetime
-import phonenumbers
 from pathlib import Path
+
+# Import centralized type system
+from app.core.type_system import TypeRegistry, TypeParseError
 
 
 class DataCleaner:
@@ -168,17 +173,27 @@ class DataCleaner:
 
     def _normalize_emails(self, series: pl.Series) -> pl.Series:
         """
-        Normalize email addresses.
+        Normalize email addresses using centralized TypeRegistry.
 
         - Convert to lowercase
         - Strip whitespace
+        - Validate format
         - Keep NULL as NULL
         """
-        return series.str.to_lowercase().str.strip_chars()
+        def normalize_email(value):
+            if not value:
+                return None
+            try:
+                return TypeRegistry.parse_email(value)
+            except TypeParseError:
+                # Lenient fallback - keep basic normalization
+                return str(value).strip().lower()
+
+        return series.map_elements(normalize_email, return_dtype=pl.Utf8)
 
     def _normalize_phones(self, series: pl.Series) -> pl.Series:
         """
-        Normalize phone numbers to E.164 format when possible.
+        Normalize phone numbers to E.164 format using centralized TypeRegistry.
 
         Falls back to original if parsing fails.
         """
@@ -186,31 +201,38 @@ class DataCleaner:
             if not value:
                 return None
             try:
-                # Try parsing with US as default country
-                parsed = phonenumbers.parse(str(value), "US")
-                if phonenumbers.is_valid_number(parsed):
-                    return phonenumbers.format_number(
-                        parsed,
-                        phonenumbers.PhoneNumberFormat.E164
-                    )
-                return str(value)  # Return original if invalid
-            except:
-                return str(value)  # Return original if parsing fails
+                return TypeRegistry.parse_phone(value, default_region='US')
+            except TypeParseError:
+                # Keep original value if parsing fails
+                return str(value).strip()
 
         return series.map_elements(normalize_phone, return_dtype=pl.Utf8)
 
     def _clean_currency(self, series: pl.Series) -> pl.Series:
         """
-        Clean currency values by removing $, commas, and other symbols.
+        Clean currency values using centralized TypeRegistry.
 
         Returns numeric string suitable for float conversion.
         """
-        # Remove currency symbols and commas
-        return series.str.replace_all(r"[$,€£¥]", "").str.strip_chars()
+        def parse_currency(value):
+            if not value:
+                return None
+            try:
+                # TypeRegistry returns Decimal, convert to string for consistency
+                decimal_val = TypeRegistry.parse_currency(value)
+                return str(decimal_val) if decimal_val is not None else None
+            except TypeParseError:
+                # Fallback: basic symbol removal
+                cleaned = str(value).strip()
+                for symbol in ['$', '€', '£', '¥', ',']:
+                    cleaned = cleaned.replace(symbol, '')
+                return cleaned.strip()
+
+        return series.map_elements(parse_currency, return_dtype=pl.Utf8)
 
     def _normalize_dates(self, series: pl.Series) -> pl.Series:
         """
-        Normalize dates to ISO format (YYYY-MM-DD).
+        Normalize dates to ISO format (YYYY-MM-DD) using centralized TypeRegistry.
 
         Attempts to parse various date formats and standardize.
         """
@@ -218,29 +240,12 @@ class DataCleaner:
             if not value:
                 return None
             try:
-                # Try common date formats
-                for fmt in [
-                    "%Y-%m-%d",
-                    "%m/%d/%Y",
-                    "%d/%m/%Y",
-                    "%m-%d-%Y",
-                    "%d-%m-%Y",
-                    "%Y/%m/%d",
-                    "%b %d, %Y",
-                    "%B %d, %Y",
-                    "%d %b %Y",
-                    "%d %B %Y",
-                ]:
-                    try:
-                        parsed = datetime.strptime(str(value).strip(), fmt)
-                        return parsed.strftime("%Y-%m-%d")
-                    except:
-                        continue
-
-                # If all formats fail, return original
-                return str(value)
-            except:
-                return str(value)
+                parsed_date = TypeRegistry.parse_date(value)
+                if parsed_date:
+                    return parsed_date.strftime("%Y-%m-%d")
+                return str(value)  # Keep original if parsing fails
+            except TypeParseError:
+                return str(value).strip()
 
         return series.map_elements(parse_date, return_dtype=pl.Utf8)
 

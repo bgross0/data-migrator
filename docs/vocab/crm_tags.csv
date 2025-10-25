@@ -1,0 +1,10 @@
+name,description
+Enterprise,Enterprise-tier prospect
+SMB,Small/medium business
+Hot,High priority/urgency
+Warm,Active engagement
+Cold,Low engagement
+Referral,Came via referral
+Event,Met at event/conference
+Inbound,Inbound marketing lead
+Outbound,Outbound prospecting

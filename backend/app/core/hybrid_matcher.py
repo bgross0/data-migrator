@@ -30,6 +30,10 @@ from app.field_mapper.core.data_structures import ColumnProfile
 from app.field_mapper.core.module_registry import get_module_registry
 from app.core.odoo_field_mappings import ODOO_FIELD_MAPPINGS
 
+# Import enhanced services
+from app.core.normalization import Normalizer
+from app.services.vocab_service import ControlledVocabService
+
 
 class HybridMatcher:
     """
@@ -406,7 +410,7 @@ class HybridMatcher:
 
     def _normalize(self, text: str) -> str:
         """
-        Normalize text for matching: lowercase, remove punctuation, trim.
+        Normalize text for matching using centralized Normalizer.
 
         Args:
             text: Text to normalize
@@ -414,9 +418,4 @@ class HybridMatcher:
         Returns:
             Normalized text
         """
-        text = text.lower().strip()
-        # Remove common punctuation but keep spaces
-        text = re.sub(r'[^\w\s]', ' ', text)
-        # Collapse multiple spaces
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
+        return Normalizer.normalize_string(text)

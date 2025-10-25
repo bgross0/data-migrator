@@ -15,5 +15,10 @@ class ColumnProfile(Base):
     patterns = Column(JSON, nullable=True)  # e.g., {"email": 0.95, "phone": 0.02}
     sample_values = Column(JSON, nullable=True)  # Array of sample values
 
+    # Detection results from enhanced profiler
+    detected_entity = Column(JSON, nullable=True)  # EntitySignature data from ColumnSignatureDetector
+    polymorphic_signature = Column(JSON, nullable=True)  # PolymorphicSignature data
+    pivot_group = Column(JSON, nullable=True)  # PivotGroup data
+
     # Relationships
     sheet = relationship("Sheet", back_populates="column_profiles")

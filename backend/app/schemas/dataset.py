@@ -19,6 +19,7 @@ class SheetResponse(SheetBase):
 
 class DatasetCreate(BaseModel):
     name: str
+    company_id: Optional[int] = None  # Multi-company support
 
 
 class DatasetBase(BaseModel):
@@ -29,6 +30,7 @@ class DatasetResponse(DatasetBase):
     id: int
     source_file_id: int
     created_at: datetime
+    company_id: Optional[int] = None  # Multi-company support
     sheets: List[SheetResponse] = []
 
     class Config:

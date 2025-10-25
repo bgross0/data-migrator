@@ -27,6 +27,9 @@ class Dataset(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_by = Column(Integer, nullable=True)  # TODO: Add User model
 
+    # Multi-company support - all policies, vocab, ledger entries scoped by company
+    company_id = Column(Integer, nullable=True, index=True)  # Nullable for backward compatibility
+
     # Module selection for improved mapping accuracy
     selected_modules = Column(JSON, default=list)  # List of module group names ["sales_crm", "contacts"]
     detected_domain = Column(String, nullable=True)  # Auto-detected business domain

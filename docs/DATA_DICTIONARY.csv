@@ -1,0 +1,122 @@
+Model,Field,Type,Required,Source,Transform,Default,Cardinality
+res.partner,id,integer (PK),Y,Odoo,N/A,auto,1
+res.partner,name,char,Y,All sources,trim + titlecase,None,1
+res.partner,is_company,boolean,Y,Inferred from context,Company if has children or VAT,,1
+res.partner,parent_id,many2one → res.partner,N,Contact sources,Resolve company by name/VAT,NULL if company,N→1
+res.partner,vat,char,N,Tax/accounting sources,normalize (remove spaces/punct),NULL,1
+res.partner,email,char,N,All sources,TypeRegistry.parse_email,NULL,1
+res.partner,phone,char,N,All sources,TypeRegistry.parse_phone → E.164,NULL,1
+res.partner,mobile,char,N,All sources,TypeRegistry.parse_phone → E.164,NULL,1
+res.partner,street,char,N,All sources,trim,NULL,1
+res.partner,street2,char,N,All sources,trim,NULL,1
+res.partner,city,char,N,All sources,trim + titlecase,NULL,1
+res.partner,state_id,many2one → res.country.state,N,All sources,Resolve by (name OR code) + country,NULL,N→1
+res.partner,country_id,many2one → res.country,N,All sources,TypeRegistry.parse_country → ISO alpha-2,NULL,N→1
+res.partner,zip,char,N,All sources,trim,NULL,1
+res.partner,type,selection,N,Inferred,"contact, invoice, delivery, other",contact,1
+res.partner,category_id,many2many → res.partner.category,N,CRM/marketing sources,Split on comma/semicolon + resolve/create,NULL,N↔N
+res.partner,company_id,many2one → res.company,Y,System config,From dataset context,System default,N→1
+crm.lead,id,integer (PK),Y,Odoo,N/A,auto,1
+crm.lead,name,char,Y,All sources,trim,None,1
+crm.lead,partner_id,many2one → res.partner,N,All sources,Resolve by email/phone/name+address,NULL,N→1
+crm.lead,contact_name,char,N,All sources,trim + titlecase (fallback if no partner_id),NULL,1
+crm.lead,email_from,char,N,All sources,TypeRegistry.parse_email,NULL,1
+crm.lead,phone,char,N,All sources,TypeRegistry.parse_phone → E.164,NULL,1
+crm.lead,user_id,many2one → res.users,Y,All sources,Resolve by email/login,System default user,N→1
+crm.lead,team_id,many2one → crm.team,N,CRM sources,Resolve by name,NULL,N→1
+crm.lead,stage_id,many2one → crm.stage,Y,CRM sources,Resolve by name (vocab policy: lookup_only),Default first stage,N→1
+crm.lead,tag_ids,many2many → crm.tag,N,CRM/marketing sources,Split on comma/semicolon + resolve/create,NULL,N↔N
+crm.lead,lost_reason_id,many2one → crm.lost.reason,N,CRM sources,Resolve by name (vocab policy: suggest_only),NULL if not lost,N→1
+crm.lead,expected_revenue,float,N,CRM sources,TypeRegistry.parse_currency → float,0.0,1
+crm.lead,probability,float,N,CRM sources,Clamp [0-100],Stage default,1
+crm.lead,utm_source_id,many2one → utm.source,N,Marketing sources,Resolve by name (vocab policy: suggest_only),NULL,N→1
+crm.lead,utm_medium_id,many2one → utm.medium,N,Marketing sources,Resolve by name (vocab policy: suggest_only),NULL,N→1
+crm.lead,utm_campaign_id,many2one → utm.campaign,N,Marketing sources,Resolve by name (vocab policy: suggest_only),NULL,N→1
+crm.lead,company_id,many2one → res.company,Y,System config,From dataset context,System default,N→1
+crm.lead,date_open,datetime,N,CRM sources,TypeRegistry.parse_date,NULL,1
+crm.lead,date_closed,datetime,N,CRM sources,TypeRegistry.parse_date,NULL,1
+crm.stage,id,integer (PK),Y,Odoo,N/A,auto,1
+crm.stage,name,char,Y,CRM config,trim,None,1
+crm.stage,sequence,integer,Y,CRM config,N/A,10,1
+crm.stage,is_won,boolean,N,CRM config,N/A,False,1
+crm.stage,fold,boolean,N,CRM config,N/A,False,1
+crm.stage,team_id,many2one → crm.team,N,CRM config,N/A,NULL (global),N→1
+crm.lost.reason,id,integer (PK),Y,Odoo,N/A,auto,1
+crm.lost.reason,name,char,Y,CRM config,trim,None,1
+crm.tag,id,integer (PK),Y,Odoo,N/A,auto,1
+crm.tag,name,char,Y,All sources,lower + trim,None,1
+crm.tag,company_id,many2one → res.company,N,System config,From context,NULL (global),N→1
+res.partner.category,id,integer (PK),Y,Odoo,N/A,auto,1
+res.partner.category,name,char,Y,All sources,lower + trim,None,1
+res.partner.category,parent_id,many2one → res.partner.category,N,Taxonomy sources,Resolve by name,NULL,N→1 (tree)
+utm.source,id,integer (PK),Y,Odoo,N/A,auto,1
+utm.source,name,char,Y,Marketing sources,lower + trim,None,1
+utm.medium,id,integer (PK),Y,Odoo,N/A,auto,1
+utm.medium,name,char,Y,Marketing sources,lower + trim,None,1
+utm.campaign,id,integer (PK),Y,Odoo,N/A,auto,1
+utm.campaign,name,char,Y,Marketing sources,lower + trim,None,1
+utm.campaign,title,char,N,Marketing sources,trim,NULL,1
+res.users,id,integer (PK),Y,Odoo,N/A,auto,1
+res.users,name,char,Y,System config,trim,None,1
+res.users,login,char,Y,System config,lower + trim,None (unique),1
+res.users,email,char,Y,System config,TypeRegistry.parse_email,None,1
+res.users,partner_id,many2one → res.partner,Y,System config,Auto-created,auto,1→1
+res.company,id,integer (PK),Y,Odoo,N/A,auto,1
+res.company,name,char,Y,System config,trim,None,1
+res.company,partner_id,many2one → res.partner,Y,System config,Auto-created,auto,1→1
+res.country,id,integer (PK),Y,Odoo,N/A,auto,1
+res.country,name,char,Y,Odoo system data,N/A,None,1
+res.country,code,char(2),Y,Odoo system data,ISO alpha-2,None (unique),1
+res.country.state,id,integer (PK),Y,Odoo,N/A,auto,1
+res.country.state,name,char,Y,Odoo system data,N/A,None,1
+res.country.state,code,char,Y,Odoo system data,N/A,None,1
+res.country.state,country_id,many2one → res.country,Y,Odoo system data,N/A,None,N→1
+mail.activity,id,integer (PK),Y,Odoo,N/A,auto,1
+mail.activity,res_model,char,Y,Polymorphic sources,From detected anchor (crm.lead or res.partner),None,N→1 (polymorphic)
+mail.activity,res_id,integer,Y,Polymorphic sources,Resolve parent record ID,None,N→1 (polymorphic)
+mail.activity,activity_type_id,many2one → mail.activity.type,Y,Activity sources,Resolve by name (Call/Email/Meeting/To-Do),Default type,N→1
+mail.activity,user_id,many2one → res.users,Y,Activity sources,Resolve by email/login,System default user,N→1
+mail.activity,date_deadline,date,Y,Activity sources,TypeRegistry.parse_date,Today,1
+mail.activity,summary,char,N,Activity sources,trim,NULL,1
+mail.activity,note,text,N,Activity sources,trim,NULL,1
+mail.message,id,integer (PK),Y,Odoo,N/A,auto,1
+mail.message,model,char,Y,Polymorphic sources,From detected anchor,None,N→1 (polymorphic)
+mail.message,res_id,integer,Y,Polymorphic sources,Resolve parent record ID,None,N→1 (polymorphic)
+mail.message,subject,char,N,Message sources,trim,NULL,1
+mail.message,body,html,N,Message sources,sanitize_html,NULL,1
+mail.message,message_type,selection,Y,Message sources,"email, comment, notification",comment,1
+mail.message,author_id,many2one → res.partner,N,Message sources,Resolve by email,NULL,N→1
+mail.message,date,datetime,Y,Message sources,TypeRegistry.parse_date,Now,1
+sale.order,id,integer (PK),Y,Odoo,N/A,auto,1
+sale.order,name,char,Y,Sales sources,trim (or sequence),auto sequence,1
+sale.order,partner_id,many2one → res.partner,Y,Sales sources,Resolve by email/phone/name,None,N→1
+sale.order,user_id,many2one → res.users,Y,Sales sources,Resolve by email/login,System default user,N→1
+sale.order,date_order,datetime,Y,Sales sources,TypeRegistry.parse_date,Now,1
+sale.order,state,selection,Y,Sales sources,"draft, sent, sale, done, cancel",draft,1
+sale.order,company_id,many2one → res.company,Y,System config,From dataset context,System default,N→1
+sale.order,order_line,one2many → sale.order.line,N,Sales sources,Nested create [(0,0,vals)],NULL,1→N
+sale.order.line,id,integer (PK),Y,Odoo,N/A,auto,1
+sale.order.line,order_id,many2one → sale.order,Y,Sales sources,Parent ID,None,N→1
+sale.order.line,product_id,many2one → product.product,Y,Sales sources,Resolve by default_code or name,None,N→1
+sale.order.line,product_uom_qty,float,Y,Sales sources,TypeRegistry.parse_decimal,1.0,1
+sale.order.line,price_unit,float,Y,Sales sources,TypeRegistry.parse_currency → float,Product list_price,1
+sale.order.line,discount,float,N,Sales sources,TypeRegistry.parse_decimal,0.0,1
+product.template,id,integer (PK),Y,Odoo,N/A,auto,1
+product.template,name,char,Y,Product sources,trim,None,1
+product.template,type,selection,Y,Product sources,"consu, service, product",consu,1
+product.template,list_price,float,N,Product sources,TypeRegistry.parse_currency → float,0.0,1
+product.template,default_code,char,N,Product sources,trim (SKU),NULL,1 (unique if set)
+product.product,id,integer (PK),Y,Odoo,N/A,auto,1
+product.product,product_tmpl_id,many2one → product.template,Y,Product sources,Parent template ID,None,N→1
+product.product,default_code,char,N,Product sources,trim (SKU),NULL,1
+project.project,id,integer (PK),Y,Odoo,N/A,auto,1
+project.project,name,char,Y,Project sources,trim,None,1
+project.project,partner_id,many2one → res.partner,N,Project sources,Resolve by email/phone/name,NULL,N→1
+project.project,user_id,many2one → res.users,N,Project sources,Resolve by email/login,NULL,N→1
+project.project,company_id,many2one → res.company,Y,System config,From dataset context,System default,N→1
+project.task,id,integer (PK),Y,Odoo,N/A,auto,1
+project.task,name,char,Y,Task sources,trim,None,1
+project.task,project_id,many2one → project.project,Y,Task sources,Resolve by name or external_id,None,N→1
+project.task,user_ids,many2many → res.users,N,Task sources,Resolve by email/login + split on comma,NULL,N↔N
+project.task,date_deadline,date,N,Task sources,TypeRegistry.parse_date,NULL,1
+project.task,company_id,many2one → res.company,Y,System config,From dataset context,System default,N→1

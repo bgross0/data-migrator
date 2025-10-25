@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Float, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 import enum
@@ -40,6 +40,7 @@ class Run(Base):
     import_graph = relationship("ImportGraph", back_populates="runs")
     logs = relationship("RunLog", back_populates="run", cascade="all, delete-orphan")
     keymaps = relationship("KeyMap", back_populates="run", cascade="all, delete-orphan")
+    ledger_entries = relationship("ImportLedger", back_populates="run", cascade="all, delete-orphan")
 
 
 class RunLog(Base):
@@ -65,6 +66,12 @@ class KeyMap(Base):
     source_key = Column(String, nullable=False)  # e.g., "buildertrend_customer_123"
     xml_id = Column(String, nullable=True)  # e.g., "axsys.partner.123"
     odoo_id = Column(Integer, nullable=True)  # Odoo internal ID
+
+    # Enhanced identity resolution fields
+    natural_key_hash = Column(String, nullable=True)  # MD5 hash of natural key components
+    content_hash = Column(String, nullable=True)  # MD5 hash of content for change detection
+    match_confidence = Column(Float, nullable=True)  # Match confidence score (0.0-1.0)
+    match_method = Column(String, nullable=True)  # How it was matched (exact, fuzzy, manual, etc.)
 
     # Relationships
     run = relationship("Run", back_populates="keymaps")

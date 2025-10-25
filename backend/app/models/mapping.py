@@ -30,6 +30,7 @@ class Mapping(Base):
     target_model = Column(String, nullable=True)  # e.g., "res.partner"
     target_field = Column(String, nullable=True)  # e.g., "email"
     confidence = Column(Float, nullable=True)  # 0.0 to 1.0
+    match_method = Column(String, nullable=True)  # e.g., "exact_pattern", "fuzzy", "kb_label"
     status = Column(SQLEnum(MappingStatus), default=MappingStatus.PENDING, nullable=False)
     chosen = Column(Boolean, default=False, nullable=False)
     rationale = Column(String, nullable=True)  # Why this mapping was suggested
